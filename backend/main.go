@@ -47,6 +47,7 @@ func main() {
 	router.POST("/rooms/:roomID/items", h.CreateItem)
 	router.GET("/rooms/:roomID/items", h.GetItems)
 	router.DELETE("/rooms/:roomID/items/:itemID", h.DeleteItem)
+	router.GET("/rooms/:roomID/users", h.GetUsersInRoom)
 
 	c := cors.New(cors.Options{
 		AllowedOrigins: []string{"*"},

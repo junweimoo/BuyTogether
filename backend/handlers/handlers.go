@@ -63,3 +63,50 @@ func (h *Handler) DeleteItem(w http.ResponseWriter, r *http.Request, ps httprout
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
+
+func (h *Handler) GetUsersInRoom(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	roomID := ps.ByName("roomID")
+	var users []models.User
+	//h.DB.Raw("SELECT u.id, u.name FROM users u JOIN room_users ru ON u.id = ru.user_id WHERE ru.room_id = ?", roomID).Scan(&users)
+	if err := h.DB.Table("room_users").
+		Select("users.id, users.name").
+		Joins("JOIN users ON users.id = room_users.user_id").
+		Where("room_users.room_id = ?", roomID).
+		Scan(&users).Error; err != nil {
+		http.Error(w, "Failed to retrieve users", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(users)
+}
+
+func (h *Handler) AddUserToRoom(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	var roomUser models.RoomUser
+
+	if err := json.NewDecoder(r.Body).Decode(&roomUser); err != nil {
+		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		return
+	}
+
+	if roomUser.RoomID == uuid.Nil || roomUser.UserID == uuid.Nil {
+		http.Error(w, "room_id and user_id are required", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.DB.Create(&roomUser).Error; err != nil {
+		http.Error(w, "Failed to add user to room", http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(map[string]string{"message": "User successfully added to room"})
+}
+
+func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	var user models.User
+	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
+		http.Error(w, "Invalid input", http.StatusBadRequest)
+		return
+	}
+	h.DB.Create(&user)
+	json.NewEncoder(w).Encode(user)
+}
