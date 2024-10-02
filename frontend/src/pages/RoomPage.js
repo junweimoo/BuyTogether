@@ -64,12 +64,14 @@ const RoomPage = () => {
             </div>
             <div>
                 <h3>Users: </h3>
-                {users.map((user) => (
-                    <li key={user.id}>
-                        {user.name}
-                        {user.id == loggedUserId && ' (me)'}
-                    </li>
-                ))}
+                <ul>
+                    {users.map((user) => (
+                        <li key={user.id}>
+                            {user.name}
+                            {user.id === loggedUserId && ' (me)'}
+                        </li>
+                    ))}
+                </ul>
             </div>
             <div>
                 <h3>Items: </h3>

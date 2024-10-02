@@ -8,6 +8,7 @@ const HomePage = () => {
     const [username, setUsername] = useState('');
     const [loggedUsername, setLoggedUsername] = useState('');
     const [loggedUserId, setLoggedUserId] = useState('');
+    const [rooms, setRooms] = useState([]);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -18,6 +19,18 @@ const HomePage = () => {
             setLoggedUserId(parsedUser.userId);
         }
     }, []);
+
+    useEffect(() => {
+        if (loggedUserId !== '') {
+            api.get(`/users/${loggedUserId}`)
+                .then((response) => {
+                    const userRooms = response.data.rooms;
+                    setRooms(userRooms);
+                }).catch(error => {
+                    console.error('Error retrieving user info:', error);
+                });
+        }
+    }, [loggedUserId])
 
     const handleCreateRoom = () => {
         api.post('/rooms', { id: loggedUserId, name: loggedUsername })
@@ -70,6 +83,14 @@ const HomePage = () => {
                 <h3>Logged in user:</h3>
                 <div>{loggedUsername}</div>
                 <div>{loggedUserId}</div>
+                <h4>Rooms:</h4>
+                <ul>
+                {rooms.map((room) => (
+                    <li key={room.id}>
+                        {room.id}
+                    </li>
+                ))}
+                </ul>
             </div>
             <br/>
             <div>

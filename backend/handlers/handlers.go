@@ -137,6 +137,33 @@ func (h *Handler) GetUsersInRoom(w http.ResponseWriter, r *http.Request, ps http
 	json.NewEncoder(w).Encode(users)
 }
 
+func (h *Handler) GetUserInfo(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	userId := ps.ByName("userID")
+
+	var user models.User
+	if err := h.DB.First(&user, "id = ?", userId).Error; err != nil {
+		http.Error(w, "Failed to retrieve user", http.StatusInternalServerError)
+		return
+	}
+
+	var rooms []models.Room
+	if err := h.DB.Table("room_users").
+		Select("rooms.id, rooms.created_at, rooms.updated_at").
+		Joins("JOIN rooms ON rooms.id = room_users.room_id").
+		Where("room_users.user_id = ?", userId).
+		Find(&rooms).Error; err != nil {
+		http.Error(w, "Failed to retrieve rooms belonging to user", http.StatusInternalServerError)
+		return
+	}
+
+	response := map[string]interface{}{
+		"user":  user,
+		"rooms": rooms,
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
 func (h *Handler) AddUserToRoom(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var roomUser models.RoomUser
 
