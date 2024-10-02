@@ -6,11 +6,17 @@ import Cookies from "js-cookie";
 const RoomPage = () => {
     const { roomID } = useParams();
     const [items, setItems] = useState([]);
-    const [newItem, setNewItem] = useState('');
+    const [newItemName, setNewItemName] = useState('');
+    const [newAmount, setNewAmount] = useState('');
+    const [newFromUserID, setNewFromUserID] = useState('');
+    const [newToUserID, setNewToUserID] = useState('');
     const [users, setUsers] = useState([]);
+    const [userMap, setUserMap] = useState(new Map());
     const [loggedUsername, setLoggedUsername] = useState('');
     const [loggedUserId, setLoggedUserId] = useState('');
     const navigate = useNavigate();
+
+
 
     useEffect(() => {
         const sessionUser = Cookies.get('session_user');
@@ -30,11 +36,29 @@ const RoomPage = () => {
         })
     }, [roomID]);
 
-    const handleNewItem = () => {
-        api.post(`/rooms/${roomID}/items`, { content: newItem }).then((response) => {
-            setItems([...items, response.data]);
-            setNewItem('');
+    useEffect(() => {
+        const newUserMap = new Map();
+        users.forEach((user) => {
+            newUserMap.set(user.id, user.name);
         });
+        setUserMap(newUserMap);
+    }, [users]);
+
+    const convertIntToStr = (amountInt) => {
+        return (amountInt / 100).toFixed(2);
+    }
+
+    const handleNewItem = () => {
+        api.post(`/rooms/${roomID}/items`, {
+                content: newItemName,
+                from_user_id: newFromUserID,
+                to_user_id: newToUserID,
+                amount: parseInt(newAmount.replace(".", ""), 10),
+            })
+            .then((response) => {
+                setItems([...items, response.data]);
+                setNewItemName('');
+            });
     };
 
     const handleDeleteItem = (itemId) => {
@@ -77,16 +101,48 @@ const RoomPage = () => {
                 <h3>Items: </h3>
                 <input
                     type="text"
-                    value={newItem}
-                    onChange={(e) => setNewItem(e.target.value)}
+                    value={newItemName}
+                    onChange={(e) => setNewItemName(e.target.value)}
                     placeholder="Add a new item"
                 />
+                <select id="userDropdown" onChange={(e) => setNewFromUserID(e.target.value)} value={newFromUserID}>
+                    <option value="" disabled>From...</option>
+                    {users.map((user) => (
+                        <option key={user.id} value={user.id}>
+                            {user.name}
+                        </option>
+                    ))}
+                </select>
+                <input
+                    type="text"
+                    id="amount"
+                    value={newAmount}
+                    onChange={(e) => {
+                        if (/^\d*\.?\d{0,2}$/.test(e.target.value)) setNewAmount(e.target.value);
+                    }}
+                    placeholder="0.00"
+                />
+                <select id="userDropdown" onChange={(e) => setNewToUserID(e.target.value)} value={newToUserID}>
+                    <option value="" disabled>To...</option>
+                    {users.map((user) => (
+                        <option key={user.id} value={user.id}>
+                            {user.name}
+                        </option>
+                    ))}
+                </select>
                 <button onClick={handleNewItem}>Post</button>
             </div>
             <ul>
                 {items.map((item) => (
                     <li key={item.id}>
                         {item.content}
+                        {" "}
+                        {userMap.get(item.from_user_id)}
+                        {" "}
+                        {convertIntToStr(item.amount)}
+                        {" "}
+                        {userMap.get(item.to_user_id)}
+                        {" "}
                         <button onClick={() => handleDeleteItem(item.id)}>x</button>
                     </li>
                 ))}

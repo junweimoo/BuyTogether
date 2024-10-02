@@ -43,8 +43,8 @@ const HomePage = () => {
             });
     };
 
-    const handleJoinRoom = () => {
-        api.post(`/rooms/${roomID.trim()}`, { id: loggedUserId, name: loggedUsername })
+    const handleJoinRoom = (id) => {
+        api.post(`/rooms/${id.trim()}`, { id: loggedUserId, name: loggedUsername })
             .then(response => {
                 const newRoomID = response.data.id;
                 navigate(`/room/${newRoomID}`);
@@ -85,11 +85,12 @@ const HomePage = () => {
                 <div>{loggedUserId}</div>
                 <h4>Rooms:</h4>
                 <ul>
-                {rooms.map((room) => (
-                    <li key={room.id}>
-                        {room.id}
-                    </li>
-                ))}
+                    {rooms.map((room) => (
+                        <li key={room.id}>
+                            {room.id}
+                            <button onClick={() => handleJoinRoom(room.id)}>Join</button>
+                        </li>
+                    ))}
                 </ul>
             </div>
             <br/>
@@ -116,7 +117,7 @@ const HomePage = () => {
                     onChange={(e) => setRoomID(e.target.value)}
                     placeholder="Enter Room ID"
                 />
-                <button onClick={handleJoinRoom}>Join Room</button>
+                <button onClick={() => handleJoinRoom(roomID)}>Join Room</button>
             </div>
         </div>
     );
