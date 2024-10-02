@@ -15,8 +15,35 @@ type Handler struct {
 }
 
 func (h *Handler) CreateRoom(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	var user models.User
+	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
+		http.Error(w, "Invalid input", http.StatusBadRequest)
+		return
+	}
+
 	room := models.Room{}
-	h.DB.Create(&room)
+	if err := h.DB.Create(&room).Error; err != nil {
+		http.Error(w, "Error creating room", http.StatusInternalServerError)
+		return
+	}
+
+	var roomUser = models.RoomUser{
+		RoomID: room.ID,
+		UserID: user.ID,
+	}
+	if err := h.DB.Where("room_id = ? AND user_id = ?", roomUser.RoomID, roomUser.UserID).First(&roomUser).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			if err := h.DB.Create(&roomUser).Error; err != nil {
+				http.Error(w, "Failed to add user to room", http.StatusInternalServerError)
+				return
+			}
+		} else {
+			http.Error(w, "Database error", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(room)
 }
 
@@ -27,6 +54,8 @@ func (h *Handler) GetRoom(w http.ResponseWriter, r *http.Request, ps httprouter.
 		http.Error(w, "Room not found", http.StatusNotFound)
 		return
 	}
+
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(room)
 }
 
@@ -45,6 +74,8 @@ func (h *Handler) CreateItem(w http.ResponseWriter, r *http.Request, ps httprout
 
 	item.RoomID = roomID
 	h.DB.Create(&item)
+
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(item)
 }
 
@@ -52,6 +83,8 @@ func (h *Handler) GetItems(w http.ResponseWriter, r *http.Request, ps httprouter
 	roomID := ps.ByName("roomID")
 	var items []models.Item
 	h.DB.Where("room_id = ?", roomID).Find(&items)
+
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(items)
 }
 
@@ -61,6 +94,7 @@ func (h *Handler) DeleteItem(w http.ResponseWriter, r *http.Request, ps httprout
 		http.Error(w, "Item not found", http.StatusNotFound)
 		return
 	}
+
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -72,10 +106,11 @@ func (h *Handler) GetUsersInRoom(w http.ResponseWriter, r *http.Request, ps http
 		Select("users.id, users.name").
 		Joins("JOIN users ON users.id = room_users.user_id").
 		Where("room_users.room_id = ?", roomID).
-		Scan(&users).Error; err != nil {
+		Find(&users).Error; err != nil {
 		http.Error(w, "Failed to retrieve users", http.StatusInternalServerError)
 		return
 	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(users)
 }
@@ -93,6 +128,13 @@ func (h *Handler) AddUserToRoom(w http.ResponseWriter, r *http.Request, ps httpr
 		return
 	}
 
+	var existingRoomUser models.RoomUser
+	if err := h.DB.Where("room_id = ? AND user_id = ?", roomUser.RoomID, roomUser.UserID).First(&existingRoomUser).Error; err == nil {
+		// If entry already exists, return a conflict status
+		json.NewEncoder(w).Encode(map[string]string{"message": "User already in the room"})
+		return
+	}
+
 	if err := h.DB.Create(&roomUser).Error; err != nil {
 		http.Error(w, "Failed to add user to room", http.StatusInternalServerError)
 		return
@@ -103,10 +145,32 @@ func (h *Handler) AddUserToRoom(w http.ResponseWriter, r *http.Request, ps httpr
 
 func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var user models.User
+
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
 		http.Error(w, "Invalid input", http.StatusBadRequest)
 		return
 	}
-	h.DB.Create(&user)
-	json.NewEncoder(w).Encode(user)
+
+	var existingUser models.User
+	if err := h.DB.Where("name = ?", user.Name).First(&existingUser).Error; err == nil {
+		response := map[string]interface{}{
+			"user":   existingUser,
+			"is_new": false,
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	if err := h.DB.Create(&user).Error; err != nil {
+		http.Error(w, "Failed to create user", http.StatusInternalServerError)
+		return
+	}
+
+	response := map[string]interface{}{
+		"user":   user,
+		"is_new": true,
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
 }

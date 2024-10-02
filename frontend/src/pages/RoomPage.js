@@ -6,11 +6,15 @@ const RoomPage = () => {
     const { roomID } = useParams();
     const [items, setItems] = useState([]);
     const [newItem, setNewItem] = useState('');
+    const [users, setUsers] = useState([]);
 
     useEffect(() => {
         api.get(`/rooms/${roomID}/items`).then((response) => {
             setItems(response.data);
         });
+        api.get(`/rooms/${roomID}/users`).then((response) => {
+            setUsers(response.data);
+        })
     }, [roomID]);
 
     const handleNewItem = () => {
@@ -34,6 +38,15 @@ const RoomPage = () => {
         <div>
             <h1>Room {roomID}</h1>
             <div>
+                <h3>Users: </h3>
+                {users.map((user) => (
+                    <li key={user.id}>
+                        {user.name}
+                    </li>
+                ))}
+            </div>
+            <div>
+                <h3>Items: </h3>
                 <input
                     type="text"
                     value={newItem}
