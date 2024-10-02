@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, {useEffect, useState} from 'react';
+import Cookies from 'js-cookie';
 import { useNavigate } from 'react-router-dom';
 import api from '../Api';
 
@@ -8,6 +9,15 @@ const HomePage = () => {
     const [loggedUsername, setLoggedUsername] = useState('');
     const [loggedUserId, setLoggedUserId] = useState('');
     const navigate = useNavigate();
+
+    useEffect(() => {
+        const sessionUser = Cookies.get('session_user');
+        if (sessionUser) {
+            const parsedUser = JSON.parse(sessionUser);
+            setLoggedUsername(parsedUser.username);
+            setLoggedUserId(parsedUser.userId);
+        }
+    }, []);
 
     const handleCreateRoom = () => {
         api.post('/rooms', { id: loggedUserId, name: loggedUsername })
@@ -41,6 +51,11 @@ const HomePage = () => {
                     setLoggedUsername(response.data.user.name);
                     setLoggedUserId(response.data.user.id);
                     setUsername("");
+
+                    Cookies.set('session_user', JSON.stringify({
+                        userId: response.data.user.id,
+                        username: response.data.user.name
+                    }), { expires: 1 }); // Cookie will expire in 1 day
                 })
                 .catch(error => {
                     console.error('Error creating user:', error);

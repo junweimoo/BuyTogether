@@ -1,12 +1,25 @@
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import {useNavigate, useParams} from 'react-router-dom';
 import api from '../Api';
+import Cookies from "js-cookie";
 
 const RoomPage = () => {
     const { roomID } = useParams();
     const [items, setItems] = useState([]);
     const [newItem, setNewItem] = useState('');
     const [users, setUsers] = useState([]);
+    const [loggedUsername, setLoggedUsername] = useState('');
+    const [loggedUserId, setLoggedUserId] = useState('');
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        const sessionUser = Cookies.get('session_user');
+        if (sessionUser) {
+            const parsedUser = JSON.parse(sessionUser);
+            setLoggedUsername(parsedUser.username);
+            setLoggedUserId(parsedUser.userId);
+        }
+    }, []);
 
     useEffect(() => {
         api.get(`/rooms/${roomID}/items`).then((response) => {
@@ -34,14 +47,27 @@ const RoomPage = () => {
             });
     };
 
+    const handleBackToHome = () => {
+        navigate('/');
+    }
+
     return (
         <div>
             <h1>Room {roomID}</h1>
+            <div>
+                <button onClick={handleBackToHome}>Back to home</button>
+            </div>
+            <div>
+                <h3>Logged in user:</h3>
+                <div>{loggedUsername}</div>
+                <div>{loggedUserId}</div>
+            </div>
             <div>
                 <h3>Users: </h3>
                 {users.map((user) => (
                     <li key={user.id}>
                         {user.name}
+                        {user.id == loggedUserId && ' (me)'}
                     </li>
                 ))}
             </div>
