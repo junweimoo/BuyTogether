@@ -47,12 +47,34 @@ func (h *Handler) CreateRoom(w http.ResponseWriter, r *http.Request, _ httproute
 	json.NewEncoder(w).Encode(room)
 }
 
-func (h *Handler) GetRoom(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func (h *Handler) JoinRoom(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	var user models.User
+	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
+		http.Error(w, "Invalid input", http.StatusBadRequest)
+		return
+	}
+
 	roomID := ps.ByName("roomID")
 	var room models.Room
 	if err := h.DB.First(&room, "id = ?", roomID).Error; err != nil {
 		http.Error(w, "Room not found", http.StatusNotFound)
 		return
+	}
+
+	var roomUser = models.RoomUser{
+		RoomID: room.ID,
+		UserID: user.ID,
+	}
+	if err := h.DB.Where("room_id = ? AND user_id = ?", roomUser.RoomID, roomUser.UserID).First(&roomUser).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			if err := h.DB.Create(&roomUser).Error; err != nil {
+				http.Error(w, "Failed to add user to room", http.StatusInternalServerError)
+				return
+			}
+		} else {
+			http.Error(w, "Database error", http.StatusInternalServerError)
+			return
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")

@@ -21,6 +21,14 @@ const HomePage = () => {
     };
 
     const handleJoinRoom = () => {
+        api.post(`/rooms/${roomID.trim()}`, { id: loggedUserId, name: loggedUsername })
+            .then(response => {
+                const newRoomID = response.data.id;
+                navigate(`/room/${newRoomID}`);
+            })
+            .catch(error => {
+                console.error('Error creating room:', error);
+            });
         if (roomID.trim()) {
             navigate(`/room/${roomID.trim()}`);
         }
