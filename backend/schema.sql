@@ -1,5 +1,6 @@
 CREATE TABLE rooms (
                        id UUID PRIMARY KEY,
+                       name TEXT NOT NULL,
                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -28,5 +29,6 @@ CREATE TABLE items (
                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE INDEX idx_items_room_id ON items(room_id);
 CREATE INDEX idx_items_from_user_id ON items(from_user_id);
 CREATE INDEX idx_items_to_user_id ON items(to_user_id);

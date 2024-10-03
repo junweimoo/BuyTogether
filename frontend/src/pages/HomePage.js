@@ -4,7 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import api from '../Api';
 
 const HomePage = () => {
-    const [roomID, setRoomID] = useState('');
+    const [newRoomName, setNewRoomName] = useState('');
+    const [newRoomID, setnewRoomID] = useState('');
     const [username, setUsername] = useState('');
     const [loggedUsername, setLoggedUsername] = useState('');
     const [loggedUserId, setLoggedUserId] = useState('');
@@ -33,7 +34,7 @@ const HomePage = () => {
     }, [loggedUserId])
 
     const handleCreateRoom = () => {
-        api.post('/rooms', { id: loggedUserId, name: loggedUsername })
+        api.post('/rooms', { userID: loggedUserId, roomName: newRoomName })
             .then(response => {
                 const newRoomID = response.data.id;
                 navigate(`/room/${newRoomID}`);
@@ -52,8 +53,8 @@ const HomePage = () => {
             .catch(error => {
                 console.error('Error creating room:', error);
             });
-        if (roomID.trim()) {
-            navigate(`/room/${roomID.trim()}`);
+        if (newRoomID.trim()) {
+            navigate(`/room/${newRoomID.trim()}`);
         }
     };
 
@@ -87,7 +88,10 @@ const HomePage = () => {
                 <ul>
                     {rooms.map((room) => (
                         <li key={room.id}>
-                            {room.id}
+                            {room.name}
+                            {" "}
+                            ({room.id})
+                            {" "}
                             <button onClick={() => handleJoinRoom(room.id)}>Join</button>
                         </li>
                     ))}
@@ -108,16 +112,22 @@ const HomePage = () => {
             <div>
                 <h3>Join / create room</h3>
                 <div>
+                    <input
+                        type="text"
+                        value={newRoomName}
+                        onChange={(e) => setNewRoomName(e.target.value)}
+                        placeholder="New Room Name"
+                    />
                     <button onClick={handleCreateRoom}>Create a New Room</button>
                 </div>
                 <br/>
                 <input
                     type="text"
-                    value={roomID}
-                    onChange={(e) => setRoomID(e.target.value)}
+                    value={newRoomID}
+                    onChange={(e) => setnewRoomID(e.target.value)}
                     placeholder="Enter Room ID"
                 />
-                <button onClick={() => handleJoinRoom(roomID)}>Join Room</button>
+                <button onClick={() => handleJoinRoom(newRoomID)}>Join Room</button>
             </div>
         </div>
     );

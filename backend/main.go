@@ -43,6 +43,7 @@ func main() {
 
 	router := httprouter.New()
 	router.POST("/rooms", h.CreateRoom)
+	router.GET("/rooms/:roomID", h.GetRoomInfo)
 	router.POST("/rooms/:roomID", h.JoinRoom)
 	router.POST("/rooms/:roomID/items", h.CreateItem)
 	router.GET("/rooms/:roomID/items", h.GetItems)

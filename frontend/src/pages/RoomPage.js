@@ -5,6 +5,7 @@ import Cookies from "js-cookie";
 
 const RoomPage = () => {
     const { roomID } = useParams();
+    const [roomName, setRoomName] = useState('');
     const [items, setItems] = useState([]);
     const [newItemName, setNewItemName] = useState('');
     const [newAmount, setNewAmount] = useState('');
@@ -16,8 +17,6 @@ const RoomPage = () => {
     const [loggedUserId, setLoggedUserId] = useState('');
     const navigate = useNavigate();
 
-
-
     useEffect(() => {
         const sessionUser = Cookies.get('session_user');
         if (sessionUser) {
@@ -28,11 +27,10 @@ const RoomPage = () => {
     }, []);
 
     useEffect(() => {
-        api.get(`/rooms/${roomID}/items`).then((response) => {
-            setItems(response.data);
-        });
-        api.get(`/rooms/${roomID}/users`).then((response) => {
-            setUsers(response.data);
+        api.get(`/rooms/${roomID}`).then((response) => {
+            setRoomName(response.data.room.name);
+            setItems(response.data.items);
+            setUsers(response.data.users);
         })
     }, [roomID]);
 
@@ -77,7 +75,8 @@ const RoomPage = () => {
 
     return (
         <div>
-            <h1>Room {roomID}</h1>
+            <h1>Room {roomName}</h1>
+            <h4>{roomID}</h4>
             <div>
                 <button onClick={handleBackToHome}>Back to home</button>
             </div>

@@ -14,14 +14,57 @@ type Handler struct {
 	DB *gorm.DB
 }
 
+type CreateRoomRequest struct {
+	RoomName string    `json:"roomName"`
+	UserID   uuid.UUID `json:"userID"`
+}
+
+func (h *Handler) GetRoomInfo(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	roomID, err := uuid.Parse(ps.ByName("roomID"))
+	if err != nil {
+		http.Error(w, "Invalid Room ID", http.StatusBadRequest)
+		return
+	}
+
+	var room models.Room
+	if err := h.DB.First(&room, roomID).Error; err != nil {
+		http.Error(w, "Room not found", http.StatusNotFound)
+	}
+
+	var users []models.User
+	if err := h.DB.Table("room_users").
+		Select("users.id, users.name").
+		Joins("JOIN users ON users.id = room_users.user_id").
+		Where("room_users.room_id = ?", roomID).
+		Find(&users).Error; err != nil {
+		http.Error(w, "Failed to retrieve users", http.StatusInternalServerError)
+		return
+	}
+
+	var items []models.Item
+	if err := h.DB.Where("room_id = ?", roomID).Find(&items).Error; err != nil {
+		http.Error(w, "Failed to retrieve items", http.StatusInternalServerError)
+	}
+
+	response := map[string]interface{}{
+		"room":  room,
+		"items": items,
+		"users": users,
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
 func (h *Handler) CreateRoom(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	var user models.User
-	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
+	var createRoomRequest CreateRoomRequest
+	if err := json.NewDecoder(r.Body).Decode(&createRoomRequest); err != nil {
 		http.Error(w, "Invalid input", http.StatusBadRequest)
 		return
 	}
 
-	room := models.Room{}
+	user := models.User{ID: createRoomRequest.UserID}
+	room := models.Room{Name: createRoomRequest.RoomName}
+
 	if err := h.DB.Create(&room).Error; err != nil {
 		http.Error(w, "Error creating room", http.StatusInternalServerError)
 		return
@@ -104,7 +147,9 @@ func (h *Handler) CreateItem(w http.ResponseWriter, r *http.Request, ps httprout
 func (h *Handler) GetItems(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	roomID := ps.ByName("roomID")
 	var items []models.Item
-	h.DB.Where("room_id = ?", roomID).Find(&items)
+	if err := h.DB.Where("room_id = ?", roomID).Find(&items).Error; err != nil {
+		http.Error(w, "Failed to retrieve items", http.StatusInternalServerError)
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(items)
@@ -123,7 +168,6 @@ func (h *Handler) DeleteItem(w http.ResponseWriter, r *http.Request, ps httprout
 func (h *Handler) GetUsersInRoom(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	roomID := ps.ByName("roomID")
 	var users []models.User
-	//h.DB.Raw("SELECT u.id, u.name FROM users u JOIN room_users ru ON u.id = ru.user_id WHERE ru.room_id = ?", roomID).Scan(&users)
 	if err := h.DB.Table("room_users").
 		Select("users.id, users.name").
 		Joins("JOIN users ON users.id = room_users.user_id").
@@ -148,7 +192,7 @@ func (h *Handler) GetUserInfo(w http.ResponseWriter, r *http.Request, ps httprou
 
 	var rooms []models.Room
 	if err := h.DB.Table("room_users").
-		Select("rooms.id, rooms.created_at, rooms.updated_at").
+		Select("rooms.id, rooms.name, rooms.created_at, rooms.updated_at").
 		Joins("JOIN rooms ON rooms.id = room_users.room_id").
 		Where("room_users.user_id = ?", userId).
 		Find(&rooms).Error; err != nil {
