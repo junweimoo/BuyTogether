@@ -39,12 +39,20 @@ func (h *Handler) GetRoomInfo(w http.ResponseWriter, r *http.Request, ps httprou
 	var items []models.Item
 	if err := h.DB.Where("room_id = ?", roomID).Find(&items).Error; err != nil {
 		http.Error(w, "Failed to retrieve items", http.StatusInternalServerError)
+		return
+	}
+
+	var simplifiedItems []models.SimplifiedItem
+	if err := h.DB.Where("room_id = ?", roomID).Find(&simplifiedItems).Error; err != nil {
+		http.Error(w, "Failed to retrieve simplified items", http.StatusInternalServerError)
+		return
 	}
 
 	response := map[string]interface{}{
-		"room":  room,
-		"items": items,
-		"users": users,
+		"room":            room,
+		"items":           items,
+		"users":           users,
+		"simplifiedItems": simplifiedItems,
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)

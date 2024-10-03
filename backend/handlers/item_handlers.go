@@ -26,7 +26,15 @@ func (h *Handler) DeleteItem(w http.ResponseWriter, r *http.Request, ps httprout
 		return
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	roomID, _ := uuid.Parse(ps.ByName("roomID"))
+	simplifiedItems, _ := h.simplifyAndStore(roomID)
+
+	response := map[string]interface{}{
+		"simplifiedItems": simplifiedItems,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
 }
 
 func (h *Handler) CreateItem(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
@@ -45,6 +53,44 @@ func (h *Handler) CreateItem(w http.ResponseWriter, r *http.Request, ps httprout
 	item.RoomID = roomID
 	h.DB.Create(&item)
 
+	simplifiedItems, _ := h.simplifyAndStore(roomID)
+
+	response := map[string]interface{}{
+		"newItem":         item,
+		"simplifiedItems": simplifiedItems,
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(item)
+	json.NewEncoder(w).Encode(response)
+}
+
+func (h *Handler) GetSimplifiedItems(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	roomID := ps.ByName("roomID")
+
+	var simplifiedItems []models.SimplifiedItem
+	if err := h.DB.Where("room_id = ?", roomID).Find(&simplifiedItems).Error; err != nil {
+		http.Error(w, "Failed to retrieve simplified items", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(simplifiedItems)
+}
+
+func (h *Handler) simplifyAndStore(roomID uuid.UUID) ([]models.SimplifiedItem, error) {
+	var items []models.Item
+	if err := h.DB.Where("room_id = ?", roomID).Find(&items).Error; err != nil {
+		return nil, err
+	}
+
+	simplifiedItems := h.Simplifier.SimplifyItems(items)
+
+	if err := h.DB.Where("room_id = ?", roomID).Delete(&models.SimplifiedItem{}).Error; err != nil {
+		return nil, err
+	}
+	if err := h.DB.Create(&simplifiedItems).Error; err != nil {
+		return nil, err
+	}
+
+	return simplifiedItems, nil
 }

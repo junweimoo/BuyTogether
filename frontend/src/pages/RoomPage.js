@@ -12,6 +12,7 @@ const RoomPage = () => {
     const [items, setItems] = useState([]);
     const [users, setUsers] = useState([]);
     const [userMap, setUserMap] = useState(new Map());
+    const [simplifiedItems, setSimplifiedItems] = useState([]);
 
     const [newItemName, setNewItemName] = useState('');
     const [newAmount, setNewAmount] = useState('');
@@ -41,6 +42,7 @@ const RoomPage = () => {
                 setRoomName(response.data.room.name);
                 setItems(response.data.items);
                 setUsers(response.data.users);
+                setSimplifiedItems(response.data.simplifiedItems);
             })
             .catch(error => {
                 console.error('Error retrieving room:', error);
@@ -68,8 +70,10 @@ const RoomPage = () => {
                 amount: parseInt(newAmount.replace(".", ""), 10),
             })
             .then((response) => {
-                setItems([...items, response.data]);
+                setItems([...items, response.data.newItem]);
+                setSimplifiedItems(response.data.simplifiedItems);
                 setNewItemName('');
+                setNewAmount('');
             })
             .catch(error => {
                 console.error('Error retrieving item:', error);
@@ -79,8 +83,9 @@ const RoomPage = () => {
 
     const handleDeleteItem = (itemId) => {
         api.delete(`/rooms/${roomID}/items/${itemId}`)
-            .then(() => {
+            .then((response) => {
                 setItems(items.filter((item) => item.id !== itemId));
+                setSimplifiedItems(response.data.simplifiedItems);
             })
             .catch((error) => {
                 console.error('Error deleting item:', error);
@@ -150,10 +155,26 @@ const RoomPage = () => {
                     ))}
                 </select>
                 <button onClick={handleNewItem}>Post</button>
+                {newItemError !== '' && <div>{newItemError}</div>}
+                <ul>
+                    {items.map((item) => (
+                        <li key={item.id}>
+                            {item.content}
+                            {" "}
+                            {userMap.get(item.from_user_id)}
+                            {" "}
+                            {convertIntToStr(item.amount)}
+                            {" "}
+                            {userMap.get(item.to_user_id)}
+                            {" "}
+                            <button onClick={() => handleDeleteItem(item.id)}>x</button>
+                        </li>
+                    ))}
+                </ul>
             </div>
-            {newItemError !== '' && <div>{newItemError}</div>}
-            <ul>
-                {items.map((item) => (
+            <div>
+                <h3>Settlements: </h3>
+                {simplifiedItems.map((item) => (
                     <li key={item.id}>
                         {item.content}
                         {" "}
@@ -163,10 +184,9 @@ const RoomPage = () => {
                         {" "}
                         {userMap.get(item.to_user_id)}
                         {" "}
-                        <button onClick={() => handleDeleteItem(item.id)}>x</button>
                     </li>
                 ))}
-            </ul>
+            </div>
         </div>
     );
 };

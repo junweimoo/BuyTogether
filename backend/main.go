@@ -1,6 +1,7 @@
 package main
 
 import (
+	"backend/algorithm"
 	"fmt"
 	"github.com/joho/godotenv"
 	"github.com/rs/cors"
@@ -39,7 +40,9 @@ func main() {
 
 	db.AutoMigrate(&models.Room{}, &models.Item{}, &models.User{})
 
-	h := handlers.Handler{DB: db}
+	simplifier := algorithm.Simplifier{}
+
+	h := handlers.Handler{DB: db, Simplifier: &simplifier}
 
 	router := httprouter.New()
 
@@ -50,9 +53,10 @@ func main() {
 	router.POST("/rooms/:roomID/leave", h.LeaveRoom)
 
 	// Items
-	router.POST("/rooms/:roomID/items", h.CreateItem)
 	router.GET("/rooms/:roomID/items", h.GetItems)
+	router.POST("/rooms/:roomID/items", h.CreateItem)
 	router.DELETE("/rooms/:roomID/items/:itemID", h.DeleteItem)
+	router.GET("/rooms/:roomID/simplified_items", h.GetSimplifiedItems)
 
 	// Users
 	router.GET("/rooms/:roomID/users", h.GetUsersInRoom)
