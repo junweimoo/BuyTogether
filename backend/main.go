@@ -37,7 +37,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	db.AutoMigrate(&models.Room{}, &models.Item{})
+	db.AutoMigrate(&models.Room{}, &models.Item{}, &models.User{})
 
 	h := handlers.Handler{DB: db}
 

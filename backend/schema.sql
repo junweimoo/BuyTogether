@@ -1,13 +1,13 @@
 CREATE TABLE rooms (
                        id UUID PRIMARY KEY,
-                       name TEXT NOT NULL,
+                       name TEXT NOT NULL UNIQUE,
                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE users (
                        id UUID PRIMARY KEY,
-                       name TEXT NOT NULL
+                       name TEXT NOT NULL UNIQUE
 );
 
 CREATE TABLE room_users (

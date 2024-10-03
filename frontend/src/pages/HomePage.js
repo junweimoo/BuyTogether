@@ -6,10 +6,16 @@ import api from '../Api';
 const HomePage = () => {
     const [newRoomName, setNewRoomName] = useState('');
     const [newRoomID, setnewRoomID] = useState('');
-    const [username, setUsername] = useState('');
+    const [newUsername, setNewUsername] = useState('');
+
     const [loggedUsername, setLoggedUsername] = useState('');
     const [loggedUserId, setLoggedUserId] = useState('');
     const [rooms, setRooms] = useState([]);
+
+    const [joinRoomError, setJoinRoomError] = useState('');
+    const [createRoomError, setCreateRoomError] = useState('');
+    const [registerUserError, setRegisterUserError] = useState('');
+    
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -41,6 +47,7 @@ const HomePage = () => {
             })
             .catch(error => {
                 console.error('Error creating room:', error);
+                setCreateRoomError(error.response.data);
             });
     };
 
@@ -48,23 +55,21 @@ const HomePage = () => {
         api.post(`/rooms/${id.trim()}`, { id: loggedUserId, name: loggedUsername })
             .then(response => {
                 const newRoomID = response.data.id;
-                navigate(`/room/${newRoomID}`);
+                navigate(`/room/${id.trim()}`);
             })
             .catch(error => {
-                console.error('Error creating room:', error);
+                console.error('Error joining room:', error);
+                setJoinRoomError(error.response.data);
             });
-        if (newRoomID.trim()) {
-            navigate(`/room/${newRoomID.trim()}`);
-        }
     };
 
     const handleCreateUser = () => {
-        if (username.trim()) {
-            api.post('/users', { name: username })
+        if (newUsername.trim()) {
+            api.post('/users', { name: newUsername })
                 .then(response => {
                     setLoggedUsername(response.data.user.name);
                     setLoggedUserId(response.data.user.id);
-                    setUsername("");
+                    setNewUsername("");
 
                     Cookies.set('session_user', JSON.stringify({
                         userId: response.data.user.id,
@@ -102,8 +107,8 @@ const HomePage = () => {
                 <h3>Login / register</h3>
                 <input
                     type="text"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
+                    value={newUsername}
+                    onChange={(e) => setNewUsername(e.target.value)}
                     placeholder="Enter Username"
                 />
                 <button onClick={handleCreateUser}>Login</button>
@@ -120,6 +125,7 @@ const HomePage = () => {
                     />
                     <button onClick={handleCreateRoom}>Create a New Room</button>
                 </div>
+                {createRoomError && <div>{createRoomError}</div>}
                 <br/>
                 <input
                     type="text"
@@ -128,6 +134,7 @@ const HomePage = () => {
                     placeholder="Enter Room ID"
                 />
                 <button onClick={() => handleJoinRoom(newRoomID)}>Join Room</button>
+                {joinRoomError !== '' && <div>{joinRoomError}</div>}
             </div>
         </div>
     );

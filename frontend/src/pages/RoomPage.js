@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import {useNavigate, useParams} from 'react-router-dom';
 import api from '../Api';
 import Cookies from "js-cookie";
+import NotFoundPage from "./NotFoundPage";
+import LoadingPage from "./LoadingPage";
 
 const RoomPage = () => {
     const { roomID } = useParams();
@@ -15,6 +17,7 @@ const RoomPage = () => {
     const [userMap, setUserMap] = useState(new Map());
     const [loggedUsername, setLoggedUsername] = useState('');
     const [loggedUserId, setLoggedUserId] = useState('');
+    const [globalError, setGlobalError] = useState('');
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -27,11 +30,16 @@ const RoomPage = () => {
     }, []);
 
     useEffect(() => {
-        api.get(`/rooms/${roomID}`).then((response) => {
-            setRoomName(response.data.room.name);
-            setItems(response.data.items);
-            setUsers(response.data.users);
-        })
+        api.get(`/rooms/${roomID}`)
+            .then((response) => {
+                setRoomName(response.data.room.name);
+                setItems(response.data.items);
+                setUsers(response.data.users);
+            })
+            .catch(error => {
+                console.error('Error retrieving room:', error);
+                setGlobalError(error);
+            })
     }, [roomID]);
 
     useEffect(() => {
@@ -74,6 +82,8 @@ const RoomPage = () => {
     }
 
     return (
+        globalError !== '' ? NotFoundPage() :
+        roomName === '' ? LoadingPage() :
         <div>
             <h1>Room {roomName}</h1>
             <h4>{roomID}</h4>
