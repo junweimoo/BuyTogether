@@ -42,12 +42,19 @@ func main() {
 	h := handlers.Handler{DB: db}
 
 	router := httprouter.New()
+
+	// Rooms
 	router.POST("/rooms", h.CreateRoom)
 	router.GET("/rooms/:roomID", h.GetRoomInfo)
 	router.POST("/rooms/:roomID", h.JoinRoom)
+	router.POST("/rooms/:roomID/leave", h.LeaveRoom)
+
+	// Items
 	router.POST("/rooms/:roomID/items", h.CreateItem)
 	router.GET("/rooms/:roomID/items", h.GetItems)
 	router.DELETE("/rooms/:roomID/items/:itemID", h.DeleteItem)
+
+	// Users
 	router.GET("/rooms/:roomID/users", h.GetUsersInRoom)
 	router.POST("/users", h.CreateUser)
 	router.GET("/users/:userID", h.GetUserInfo)

@@ -14,6 +14,7 @@ const HomePage = () => {
 
     const [joinRoomError, setJoinRoomError] = useState('');
     const [createRoomError, setCreateRoomError] = useState('');
+    const [leaveRoomError, setLeaveRoomError] = useState('');
     const [registerUserError, setRegisterUserError] = useState('');
     
     const navigate = useNavigate();
@@ -63,6 +64,17 @@ const HomePage = () => {
             });
     };
 
+    const handleLeaveRoom = (id) => {
+        api.post(`/rooms/${id.trim()}/leave`, { id: loggedUserId, name: loggedUsername })
+            .then(response => {
+                setRooms(rooms.filter((room) => room.id !== id));
+            })
+            .catch(error => {
+                console.error('Error joining room:', error);
+                setLeaveRoomError(error.response.data);
+            });
+    }
+
     const handleCreateUser = () => {
         if (newUsername.trim()) {
             api.post('/users', { name: newUsername })
@@ -78,6 +90,7 @@ const HomePage = () => {
                 })
                 .catch(error => {
                     console.error('Error creating user:', error);
+                    setRegisterUserError(error.response.data);
                 })
         }
     }
@@ -97,7 +110,8 @@ const HomePage = () => {
                             {" "}
                             ({room.id})
                             {" "}
-                            <button onClick={() => handleJoinRoom(room.id)}>Join</button>
+                            <button onClick={() => handleJoinRoom(room.id)}>Enter</button>
+                            <button onClick={() => handleLeaveRoom(room.id)}>Leave</button>
                         </li>
                     ))}
                 </ul>

@@ -7,17 +7,23 @@ import LoadingPage from "./LoadingPage";
 
 const RoomPage = () => {
     const { roomID } = useParams();
+
     const [roomName, setRoomName] = useState('');
     const [items, setItems] = useState([]);
+    const [users, setUsers] = useState([]);
+    const [userMap, setUserMap] = useState(new Map());
+
     const [newItemName, setNewItemName] = useState('');
     const [newAmount, setNewAmount] = useState('');
     const [newFromUserID, setNewFromUserID] = useState('');
     const [newToUserID, setNewToUserID] = useState('');
-    const [users, setUsers] = useState([]);
-    const [userMap, setUserMap] = useState(new Map());
+
     const [loggedUsername, setLoggedUsername] = useState('');
     const [loggedUserId, setLoggedUserId] = useState('');
+
     const [globalError, setGlobalError] = useState('');
+    const [newItemError, setNewItemError] = useState('');
+
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -64,6 +70,10 @@ const RoomPage = () => {
             .then((response) => {
                 setItems([...items, response.data]);
                 setNewItemName('');
+            })
+            .catch(error => {
+                console.error('Error retrieving item:', error);
+                setNewItemError(error.response.data);
             });
     };
 
@@ -141,6 +151,7 @@ const RoomPage = () => {
                 </select>
                 <button onClick={handleNewItem}>Post</button>
             </div>
+            {newItemError !== '' && <div>{newItemError}</div>}
             <ul>
                 {items.map((item) => (
                     <li key={item.id}>

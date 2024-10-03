@@ -17,6 +17,7 @@ CREATE TABLE room_users (
 );
 
 CREATE INDEX idx_room_users_room_id ON room_users(room_id);
+CREATE INDEX idx_room_users_room_id ON room_users(user_id);
 
 CREATE TABLE items (
                        id UUID PRIMARY KEY,

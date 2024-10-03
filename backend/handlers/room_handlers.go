@@ -123,3 +123,31 @@ func (h *Handler) JoinRoom(w http.ResponseWriter, r *http.Request, ps httprouter
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(room)
 }
+
+func (h *Handler) LeaveRoom(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	var user models.User
+	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
+		http.Error(w, "Invalid input", http.StatusBadRequest)
+		return
+	}
+	if err := h.DB.First(&user, "id = ?", user.ID).Error; err != nil {
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+
+	roomID := ps.ByName("roomID")
+	var room models.Room
+	if err := h.DB.First(&room, "id = ?", roomID).Error; err != nil {
+		http.Error(w, "Room not found", http.StatusNotFound)
+		return
+	}
+
+	var roomUser models.RoomUser
+	if err := h.DB.Where("room_id = ? AND user_id = ?", roomID, user.ID).Delete(&roomUser).Error; err != nil {
+		http.Error(w, "Failed to leave room", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"message": "User successfully left the room"})
+}
