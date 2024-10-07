@@ -1,11 +1,16 @@
 package handlers
 
 import (
+	"backend/algorithm"
 	"backend/models"
 	"encoding/json"
 	"github.com/google/uuid"
 	"github.com/julienschmidt/httprouter"
 	"net/http"
+)
+
+const (
+	DefaultAlgo = algorithm.Greedy
 )
 
 func (h *Handler) GetItems(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
@@ -27,7 +32,7 @@ func (h *Handler) DeleteItem(w http.ResponseWriter, r *http.Request, ps httprout
 	}
 
 	roomID, _ := uuid.Parse(ps.ByName("roomID"))
-	simplifiedItems, _ := h.simplifyAndStore(roomID)
+	simplifiedItems, _ := h.simplifyAndStore(roomID, DefaultAlgo)
 
 	response := map[string]interface{}{
 		"simplifiedItems": simplifiedItems,
@@ -53,7 +58,7 @@ func (h *Handler) CreateItem(w http.ResponseWriter, r *http.Request, ps httprout
 	item.RoomID = roomID
 	h.DB.Create(&item)
 
-	simplifiedItems, _ := h.simplifyAndStore(roomID)
+	simplifiedItems, _ := h.simplifyAndStore(roomID, DefaultAlgo)
 
 	response := map[string]interface{}{
 		"newItem":         item,
@@ -77,14 +82,35 @@ func (h *Handler) GetSimplifiedItems(w http.ResponseWriter, r *http.Request, ps 
 	json.NewEncoder(w).Encode(simplifiedItems)
 }
 
-func (h *Handler) simplifyAndStore(roomID uuid.UUID) ([]models.SimplifiedItem, error) {
+func (h *Handler) SimplifyItems(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	roomID, err := uuid.Parse(ps.ByName("roomID"))
+	if err != nil {
+		http.Error(w, "Invalid Room ID", http.StatusBadRequest)
+		return
+	}
+
+	algoStr := r.URL.Query().Get("algo")
+	algo := h.Simplifier.GetAlgorithmType(algoStr)
+
+	simplifiedItems, _ := h.simplifyAndStore(roomID, algo)
+
+	response := map[string]interface{}{
+		"algo":            algoStr,
+		"simplifiedItems": simplifiedItems,
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+func (h *Handler) simplifyAndStore(roomID uuid.UUID, algoType algorithm.AlgoType) ([]models.SimplifiedItem, error) {
 	var items []models.Item
 	if err := h.DB.Where("room_id = ?", roomID).Find(&items).Error; err != nil {
 		return nil, err
 	}
 
-	simplifiedItems := h.Simplifier.SimplifyItems(items)
+	simplifiedItems := h.Simplifier.SimplifyItems(items, algoType)
 
+	// TODO: lock DB row while processing
 	if err := h.DB.Where("room_id = ?", roomID).Delete(&models.SimplifiedItem{}).Error; err != nil {
 		return nil, err
 	}

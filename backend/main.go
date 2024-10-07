@@ -57,6 +57,7 @@ func main() {
 	router.POST("/rooms/:roomID/items", h.CreateItem)
 	router.DELETE("/rooms/:roomID/items/:itemID", h.DeleteItem)
 	router.GET("/rooms/:roomID/simplified_items", h.GetSimplifiedItems)
+	router.POST("/rooms/:roomID/simplify", h.SimplifyItems)
 
 	// Users
 	router.GET("/rooms/:roomID/users", h.GetUsersInRoom)

@@ -6,10 +6,41 @@ import (
 	"github.com/google/uuid"
 )
 
+type AlgoType int
+
+const (
+	NoSimplify AlgoType = iota
+	Greedy
+	PreserveEdges
+)
+
 type Simplifier struct {
 }
 
-func (s *Simplifier) SimplifyItems(items []models.Item) []models.SimplifiedItem {
+func (s *Simplifier) GetAlgorithmType(st string) AlgoType {
+	switch st {
+	case "1":
+		return Greedy
+	case "2":
+		return PreserveEdges
+	default:
+		return NoSimplify
+	}
+}
+
+func (s *Simplifier) SimplifyItems(items []models.Item, algoChoice AlgoType) []models.SimplifiedItem {
+	switch algoChoice {
+	case NoSimplify:
+		return s.noSimplify(items)
+	case Greedy:
+		return s.greedyAlgorithm(items)
+	case PreserveEdges:
+		return s.greedyAlgorithm(items)
+	}
+	return nil
+}
+
+func (s *Simplifier) noSimplify(items []models.Item) []models.SimplifiedItem {
 	var res []models.SimplifiedItem
 	for _, item := range items {
 		simplifiedItem := models.SimplifiedItem{

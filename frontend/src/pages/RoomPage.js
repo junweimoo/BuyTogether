@@ -96,6 +96,16 @@ const RoomPage = () => {
         navigate('/');
     }
 
+    const handleSimplify = (algoType) => {
+        api.post(`/rooms/${roomID}/simplify?algo=${algoType}`)
+            .then((response) => {
+                setSimplifiedItems(response.data.simplifiedItems);
+            })
+            .catch((error) => {
+                console.error('Error during simplification:', error);
+            });
+    }
+
     return (
         globalError !== '' ? NotFoundPage() :
         roomName === '' ? LoadingPage() :
@@ -174,6 +184,10 @@ const RoomPage = () => {
             </div>
             <div>
                 <h3>Settlements: </h3>
+                <button onClick={() => handleSimplify(0)}>Reset</button>
+                <button onClick={() => handleSimplify(1)}>Greedy</button>
+                <button onClick={() => handleSimplify(2)}>Preserve</button>
+                <br/><br/>
                 {simplifiedItems.map((item) => (
                     <li key={item.id}>
                         {item.content}
