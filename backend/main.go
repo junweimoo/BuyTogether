@@ -50,10 +50,10 @@ func main() {
 	router := httprouter.New()
 
 	// Rooms
-	router.POST("/rooms", h.CreateRoom)
-	router.GET("/rooms/:roomID", h.GetRoomInfo)
-	router.POST("/rooms/:roomID", h.JoinRoom)
-	router.POST("/rooms/:roomID/leave", h.LeaveRoom)
+	router.POST("/rooms", auth.JWTAuth(h.CreateRoom))
+	router.GET("/rooms/:roomID", auth.JWTAuth(h.GetRoomInfo))
+	router.POST("/rooms/:roomID", auth.JWTAuth(h.JoinRoom))
+	router.POST("/rooms/:roomID/leave", auth.JWTAuth(h.LeaveRoom))
 	router.GET("/rooms/:roomID/users", h.GetUsersInRoom)
 
 	// Items

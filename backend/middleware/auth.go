@@ -3,6 +3,7 @@ package middleware
 import (
 	"backend/models"
 	"context"
+	"github.com/google/uuid"
 	"github.com/julienschmidt/httprouter"
 	"net/http"
 	"strings"
@@ -25,8 +26,8 @@ func (a *Auth) JWTAuth(next httprouter.Handle) httprouter.Handle {
 
 		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
 
-		claims := jwt.StandardClaims{}
-		token, err := jwt.ParseWithClaims(tokenString, &claims, func(token *jwt.Token) (interface{}, error) {
+		claims := &jwt.StandardClaims{}
+		token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
 			return a.JWTKey, nil
 		})
 
@@ -35,13 +36,17 @@ func (a *Auth) JWTAuth(next httprouter.Handle) httprouter.Handle {
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), "userID", claims.Subject)
+		userID, err := uuid.Parse(claims.Subject)
+		if err != nil {
+			http.Error(w, "Invalid user ID in token", http.StatusInternalServerError)
+		}
+		ctx := context.WithValue(r.Context(), "userID", userID)
 		next(w, r.WithContext(ctx), ps)
 	}
 }
 
 func (a *Auth) GenerateToken(user *models.User) (string, error) {
-	expirationTime := time.Now().Add(12 * time.Hour) // Token expires in 1 hour
+	expirationTime := time.Now().Add(12 * time.Hour)
 	claims := &jwt.StandardClaims{
 		Subject:   user.ID.String(),
 		ExpiresAt: expirationTime.Unix(),

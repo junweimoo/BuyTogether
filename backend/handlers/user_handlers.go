@@ -145,7 +145,7 @@ func (h *Handler) LoginUser(w http.ResponseWriter, r *http.Request, ps httproute
 		return
 	}
 
-	tokenString, err := h.Auth.GenerateToken(&user)
+	tokenString, err := h.Auth.GenerateToken(&foundUser)
 	if err != nil {
 		http.Error(w, "Failed to generate token", http.StatusInternalServerError)
 		return

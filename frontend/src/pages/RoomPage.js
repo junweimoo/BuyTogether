@@ -21,6 +21,7 @@ const RoomPage = () => {
 
     const [loggedUsername, setLoggedUsername] = useState('');
     const [loggedUserId, setLoggedUserId] = useState('');
+    const [loggedJWT, setLoggedJWT] = useState('');
 
     const [globalError, setGlobalError] = useState('');
     const [newItemError, setNewItemError] = useState('');
@@ -29,15 +30,16 @@ const RoomPage = () => {
 
     useEffect(() => {
         const sessionUser = Cookies.get('session_user');
-        if (sessionUser) {
-            const parsedUser = JSON.parse(sessionUser);
-            setLoggedUsername(parsedUser.username);
-            setLoggedUserId(parsedUser.userId);
+        if (!sessionUser) {
+            setGlobalError("Not logged in")
+            return
         }
-    }, []);
+        const parsedUser = JSON.parse(sessionUser);
+        setLoggedUsername(parsedUser.username);
+        setLoggedUserId(parsedUser.userId);
+        setLoggedJWT(parsedUser.jwt);
 
-    useEffect(() => {
-        api.get(`/rooms/${roomID}`)
+        api.get(`/rooms/${roomID}`, { headers: { Authorization: `Bearer ${parsedUser.jwt}` } })
             .then((response) => {
                 setRoomName(response.data.room.name);
                 setItems(response.data.items);
@@ -46,9 +48,9 @@ const RoomPage = () => {
             })
             .catch(error => {
                 console.error('Error retrieving room:', error);
-                setGlobalError(error);
+                setGlobalError(error.response.data);
             })
-    }, [roomID]);
+    }, []);
 
     useEffect(() => {
         const newUserMap = new Map();
@@ -107,7 +109,7 @@ const RoomPage = () => {
     }
 
     return (
-        globalError !== '' ? NotFoundPage() :
+        globalError !== '' ? NotFoundPage( globalError ) :
         roomName === '' ? LoadingPage() :
         <div>
             <h1>Room {roomName}</h1>

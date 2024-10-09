@@ -10,14 +10,25 @@ import (
 )
 
 type CreateRoomRequest struct {
-	RoomName string    `json:"roomName"`
-	UserID   uuid.UUID `json:"userID"`
+	RoomName string `json:"roomName"`
 }
 
 func (h *Handler) GetRoomInfo(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	roomID, err := uuid.Parse(ps.ByName("roomID"))
 	if err != nil {
 		http.Error(w, "Invalid Room ID", http.StatusBadRequest)
+		return
+	}
+
+	// Authenticate if user belongs to this room
+	userID := r.Context().Value("userID").(uuid.UUID)
+	var roomUser models.RoomUser
+	if err := h.DB.Where("user_id = ? AND room_id = ?", userID, roomID).First(&roomUser).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			http.Error(w, "User does not belong to this room", http.StatusNotFound)
+		} else {
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		}
 		return
 	}
 
@@ -70,7 +81,8 @@ func (h *Handler) CreateRoom(w http.ResponseWriter, r *http.Request, _ httproute
 		return
 	}
 
-	user := models.User{ID: createRoomRequest.UserID}
+	userID := r.Context().Value("userID").(uuid.UUID)
+	user := models.User{ID: userID}
 	room := models.Room{Name: createRoomRequest.RoomName}
 
 	if err := h.DB.Where("name = ?", createRoomRequest.RoomName).First(&room).Error; err == nil {
@@ -104,11 +116,7 @@ func (h *Handler) CreateRoom(w http.ResponseWriter, r *http.Request, _ httproute
 }
 
 func (h *Handler) JoinRoom(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	var user models.User
-	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
-		http.Error(w, "Invalid input", http.StatusBadRequest)
-		return
-	}
+	userIDFromJWT := r.Context().Value("userID").(uuid.UUID)
 
 	roomID := ps.ByName("roomID")
 	var room models.Room
@@ -119,7 +127,7 @@ func (h *Handler) JoinRoom(w http.ResponseWriter, r *http.Request, ps httprouter
 
 	var roomUser = models.RoomUser{
 		RoomID: room.ID,
-		UserID: user.ID,
+		UserID: userIDFromJWT,
 	}
 	if err := h.DB.Where("room_id = ? AND user_id = ?", roomUser.RoomID, roomUser.UserID).First(&roomUser).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -138,26 +146,26 @@ func (h *Handler) JoinRoom(w http.ResponseWriter, r *http.Request, ps httprouter
 }
 
 func (h *Handler) LeaveRoom(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	var user models.User
-	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
-		http.Error(w, "Invalid input", http.StatusBadRequest)
-		return
-	}
-	if err := h.DB.First(&user, "id = ?", user.ID).Error; err != nil {
+	userID := r.Context().Value("userID").(uuid.UUID)
+	roomID := ps.ByName("roomID")
+
+	if err := h.DB.First(&models.User{}, "id = ?", userID).Error; err != nil {
 		http.Error(w, "User not found", http.StatusNotFound)
 		return
 	}
 
-	roomID := ps.ByName("roomID")
 	var room models.Room
 	if err := h.DB.First(&room, "id = ?", roomID).Error; err != nil {
 		http.Error(w, "Room not found", http.StatusNotFound)
 		return
 	}
 
-	var roomUser models.RoomUser
-	if err := h.DB.Where("room_id = ? AND user_id = ?", roomID, user.ID).Delete(&roomUser).Error; err != nil {
-		http.Error(w, "Failed to leave room", http.StatusInternalServerError)
+	if err := h.DB.Where("room_id = ? AND user_id = ?", roomID, userID).Delete(&models.RoomUser{}).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			http.Error(w, "User does not belong to this room", http.StatusNotFound)
+		} else {
+			http.Error(w, "Database error", http.StatusInternalServerError)
+		}
 		return
 	}
 

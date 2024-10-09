@@ -39,21 +39,23 @@ const HomePage = () => {
     }, []);
 
     useEffect(() => {
-        if (loggedJWT !== '' && loggedUserId !== '') {
-            api.get(`/users/${loggedUserId}`, {
-                    headers: { Authorization: `Bearer ${loggedJWT}` }
-                })
-                .then((response) => {
-                    const userRooms = response.data.rooms;
-                    setRooms(userRooms);
-                }).catch(error => {
-                    console.error('Error retrieving user info:', error);
-                });
+        if (loggedJWT === '' || loggedUserId === '') {
+            setRooms([])
+            return
         }
+        api.get(`/users/${loggedUserId}`, { headers: { Authorization: `Bearer ${loggedJWT}` }})
+            .then((response) => {
+                const userRooms = response.data.rooms;
+                setRooms(userRooms);
+            }).catch(error => {
+            console.error('Error retrieving user info:', error);
+        });
     }, [loggedJWT])
 
     const handleCreateRoom = () => {
-        api.post('/rooms', { userID: loggedUserId, roomName: newRoomName })
+        api.post('/rooms',
+                { roomName: newRoomName },
+                { headers: { Authorization: `Bearer ${loggedJWT}` } })
             .then(response => {
                 const newRoomID = response.data.id;
                 navigate(`/room/${newRoomID}`);
@@ -65,7 +67,9 @@ const HomePage = () => {
     };
 
     const handleJoinRoom = (id) => {
-        api.post(`/rooms/${id.trim()}`, { id: loggedUserId, name: loggedUsername })
+        api.post(`/rooms/${id.trim()}`,
+                undefined,
+                {headers: { Authorization: `Bearer ${loggedJWT}` }})
             .then(response => {
                 const newRoomID = response.data.id;
                 navigate(`/room/${newRoomID.trim()}`);
@@ -77,7 +81,9 @@ const HomePage = () => {
     };
 
     const handleLeaveRoom = (id) => {
-        api.post(`/rooms/${id.trim()}/leave`, { id: loggedUserId, name: loggedUsername })
+        api.post(`/rooms/${id.trim()}/leave`,
+                undefined,
+                {headers: { Authorization: `Bearer ${loggedJWT}` }})
             .then(response => {
                 setRooms(rooms.filter((room) => room.id !== id));
             })
@@ -127,27 +133,40 @@ const HomePage = () => {
         }
     }
 
+    const handleLogout = () => {
+        Cookies.remove('session_user');
+        setLoggedUserId('');
+        setLoggedUsername('');
+        setLoggedJWT('');
+    }
+
     return (
         <div>
             <h1>Welcome to BuyTogether</h1>
-            <div>
-                <h3>Logged in user:</h3>
-                <div>{loggedUsername}</div>
-                <div>{loggedUserId}</div>
-                <h4>Rooms:</h4>
-                <ul>
-                    {rooms.map((room) => (
-                        <li key={room.id}>
-                            {room.name}
-                            {" "}
-                            ({room.id})
-                            {" "}
-                            <button onClick={() => handleJoinRoom(room.id)}>Enter</button>
-                            <button onClick={() => handleLeaveRoom(room.id)}>Leave</button>
-                        </li>
-                    ))}
-                </ul>
-            </div>
+            {loggedJWT
+                ? <div>
+                    <h3>Logged in user:</h3>
+                    <div>{loggedUsername}</div>
+                    <div>{loggedUserId}</div>
+                    <button onClick={handleLogout}>Logout</button>
+                    <h4>Rooms:</h4>
+                    <ul>
+                        {rooms.map((room) => (
+                            <li key={room.id}>
+                                {room.name}
+                                {" "}
+                                ({room.id})
+                                {" "}
+                                <button onClick={() => handleJoinRoom(room.id)}>Enter</button>
+                                <button onClick={() => handleLeaveRoom(room.id)}>Leave</button>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+                : <div>
+                    <h3>Not logged in</h3>
+                </div>
+            }
             <br/>
             <div>
                 <button onClick={() => setShowRegister(!showRegister)}>
