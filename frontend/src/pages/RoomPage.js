@@ -70,7 +70,7 @@ const RoomPage = () => {
                 from_user_id: newFromUserID,
                 to_user_id: newToUserID,
                 amount: parseInt(newAmount.replace(".", ""), 10),
-            })
+            }, { headers: { Authorization: `Bearer ${loggedJWT}` }})
             .then((response) => {
                 setItems([...items, response.data.newItem]);
                 setSimplifiedItems(response.data.simplifiedItems);
@@ -84,7 +84,7 @@ const RoomPage = () => {
     };
 
     const handleDeleteItem = (itemId) => {
-        api.delete(`/rooms/${roomID}/items/${itemId}`)
+        api.delete(`/rooms/${roomID}/items/${itemId}`, { headers: { Authorization: `Bearer ${loggedJWT}` }})
             .then((response) => {
                 setItems(items.filter((item) => item.id !== itemId));
                 setSimplifiedItems(response.data.simplifiedItems);
@@ -99,7 +99,8 @@ const RoomPage = () => {
     }
 
     const handleSimplify = (algoType) => {
-        api.post(`/rooms/${roomID}/simplify?algo=${algoType}`)
+        api.post(`/rooms/${roomID}/simplify?algo=${algoType}`, undefined,
+            { headers: { Authorization: `Bearer ${loggedJWT}` }})
             .then((response) => {
                 setSimplifiedItems(response.data.simplifiedItems);
             })

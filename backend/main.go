@@ -57,11 +57,11 @@ func main() {
 	router.GET("/rooms/:roomID/users", h.GetUsersInRoom)
 
 	// Items
-	router.GET("/rooms/:roomID/items", h.GetItems)
-	router.POST("/rooms/:roomID/items", h.CreateItem)
-	router.DELETE("/rooms/:roomID/items/:itemID", h.DeleteItem)
-	router.GET("/rooms/:roomID/simplified_items", h.GetSimplifiedItems)
-	router.POST("/rooms/:roomID/simplify", h.SimplifyItems)
+	router.GET("/rooms/:roomID/items", auth.JWTAuth(h.GetItems))
+	router.POST("/rooms/:roomID/items", auth.JWTAuth(h.CreateItem))
+	router.DELETE("/rooms/:roomID/items/:itemID", auth.JWTAuth(h.DeleteItem))
+	router.GET("/rooms/:roomID/simplified_items", auth.JWTAuth(h.GetSimplifiedItems))
+	router.POST("/rooms/:roomID/simplify", auth.JWTAuth(h.SimplifyItems))
 
 	// Users
 	router.POST("/users/register", h.CreateUser)

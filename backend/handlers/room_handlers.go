@@ -20,7 +20,6 @@ func (h *Handler) GetRoomInfo(w http.ResponseWriter, r *http.Request, ps httprou
 		return
 	}
 
-	// Authenticate if user belongs to this room
 	userID := r.Context().Value("userID").(uuid.UUID)
 	var roomUser models.RoomUser
 	if err := h.DB.Where("user_id = ? AND room_id = ?", userID, roomID).First(&roomUser).Error; err != nil {
@@ -116,8 +115,6 @@ func (h *Handler) CreateRoom(w http.ResponseWriter, r *http.Request, _ httproute
 }
 
 func (h *Handler) JoinRoom(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	userIDFromJWT := r.Context().Value("userID").(uuid.UUID)
-
 	roomID := ps.ByName("roomID")
 	var room models.Room
 	if err := h.DB.First(&room, "id = ?", roomID).Error; err != nil {
@@ -125,6 +122,7 @@ func (h *Handler) JoinRoom(w http.ResponseWriter, r *http.Request, ps httprouter
 		return
 	}
 
+	userIDFromJWT := r.Context().Value("userID").(uuid.UUID)
 	var roomUser = models.RoomUser{
 		RoomID: room.ID,
 		UserID: userIDFromJWT,
