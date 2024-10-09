@@ -7,7 +7,8 @@ CREATE TABLE rooms (
 
 CREATE TABLE users (
                        id UUID PRIMARY KEY,
-                       name TEXT NOT NULL UNIQUE
+                       name TEXT NOT NULL UNIQUE,
+                       password_hash TEXT NOT NULL
 );
 
 CREATE TABLE room_users (
@@ -17,7 +18,6 @@ CREATE TABLE room_users (
 );
 
 CREATE INDEX idx_room_users_room_id ON room_users(room_id);
-CREATE INDEX idx_room_users_room_id ON room_users(user_id);
 
 CREATE TABLE items (
                        id UUID PRIMARY KEY,

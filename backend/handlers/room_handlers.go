@@ -65,6 +65,11 @@ func (h *Handler) CreateRoom(w http.ResponseWriter, r *http.Request, _ httproute
 		return
 	}
 
+	if len(createRoomRequest.RoomName) < 5 {
+		http.Error(w, "Room name must be at least 5 characters", http.StatusBadRequest)
+		return
+	}
+
 	user := models.User{ID: createRoomRequest.UserID}
 	room := models.Room{Name: createRoomRequest.RoomName}
 

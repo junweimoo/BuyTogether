@@ -8,4 +8,5 @@ import (
 type Handler struct {
 	DB         *gorm.DB
 	Simplifier *algorithm.Simplifier
+	JWTKey     []byte
 }

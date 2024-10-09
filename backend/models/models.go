@@ -26,8 +26,9 @@ type Item struct {
 }
 
 type User struct {
-	ID   uuid.UUID `gorm:"type:uuid;primary_key;" json:"id"`
-	Name string    `gorm:"type:text;unique" json:"name"`
+	ID           uuid.UUID `gorm:"type:uuid;primary_key;" json:"id"`
+	Name         string    `gorm:"type:text;unique" json:"name"`
+	PasswordHash string    `gorm:"type:text;" json:"password_hash"`
 }
 
 type RoomUser struct {

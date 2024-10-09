@@ -3,9 +3,12 @@ package handlers
 import (
 	"backend/models"
 	"encoding/json"
+	"github.com/dgrijalva/jwt-go"
 	"github.com/google/uuid"
 	"github.com/julienschmidt/httprouter"
+	"golang.org/x/crypto/bcrypt"
 	"net/http"
+	"time"
 )
 
 func (h *Handler) GetUsersInRoom(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
@@ -76,7 +79,11 @@ func (h *Handler) AddUserToRoom(w http.ResponseWriter, r *http.Request, ps httpr
 		return
 	}
 
-	json.NewEncoder(w).Encode(map[string]string{"message": "User successfully added to room"})
+	response := map[string]interface{}{
+		"message": "User added to room",
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
 }
 
 func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
@@ -87,16 +94,27 @@ func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request, ps httprout
 		return
 	}
 
-	var existingUser models.User
-	if err := h.DB.Where("name = ?", user.Name).First(&existingUser).Error; err == nil {
-		response := map[string]interface{}{
-			"user":   existingUser,
-			"is_new": false,
-		}
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(response)
+	if len(user.PasswordHash) < 6 {
+		http.Error(w, "Password must be at least 6 characters", http.StatusBadRequest)
 		return
 	}
+	if len(user.Name) < 6 {
+		http.Error(w, "Name must be at least 6 characters", http.StatusBadRequest)
+		return
+	}
+
+	var existingUser models.User
+	if err := h.DB.Where("name = ?", user.Name).First(&existingUser).Error; err == nil {
+		http.Error(w, "User already exists", http.StatusBadRequest)
+		return
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.PasswordHash), bcrypt.DefaultCost)
+	if err != nil {
+		http.Error(w, "Failed to hash password", http.StatusInternalServerError)
+		return
+	}
+	user.PasswordHash = string(hashedPassword)
 
 	if err := h.DB.Create(&user).Error; err != nil {
 		http.Error(w, "Failed to create user", http.StatusInternalServerError)
@@ -104,8 +122,47 @@ func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request, ps httprout
 	}
 
 	response := map[string]interface{}{
-		"user":   user,
-		"is_new": true,
+		"message": "User created",
+		"success": true,
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+func (h *Handler) LoginUser(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	var user models.User
+	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
+		http.Error(w, "Invalid input", http.StatusBadRequest)
+		return
+	}
+
+	var foundUser models.User
+	if err := h.DB.First(&foundUser, "name = ?", user.Name).Error; err != nil {
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(foundUser.PasswordHash), []byte(user.PasswordHash)); err != nil {
+		http.Error(w, "Incorrect password", http.StatusUnauthorized)
+		return
+	}
+
+	expirationTime := time.Now().Add(12 * time.Hour) // Token expires in 1 hour
+	claims := &jwt.StandardClaims{
+		Subject:   user.ID.String(),
+		ExpiresAt: expirationTime.Unix(),
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	tokenString, err := token.SignedString(h.JWTKey)
+	if err != nil {
+		http.Error(w, "Failed to generate token", http.StatusInternalServerError)
+		return
+	}
+
+	response := map[string]interface{}{
+		"message": "User logged in",
+		"user":    foundUser,
+		"token":   tokenString,
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)

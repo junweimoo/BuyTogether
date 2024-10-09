@@ -29,6 +29,7 @@ func main() {
 	dbPort := os.Getenv("DB_PORT")
 	dbHost := os.Getenv("DB_HOST")
 	dbSSLMode := os.Getenv("DB_SSLMODE")
+	jwtkey := os.Getenv("JWT_SECRET")
 
 	dsn := fmt.Sprintf("user=%s password=%s dbname=%s port=%s host=%s sslmode=%s",
 		dbUser, dbPassword, dbName, dbPort, dbHost, dbSSLMode)
@@ -42,7 +43,7 @@ func main() {
 
 	simplifier := algorithm.Simplifier{}
 
-	h := handlers.Handler{DB: db, Simplifier: &simplifier}
+	h := handlers.Handler{DB: db, Simplifier: &simplifier, JWTKey: []byte(jwtkey)}
 
 	router := httprouter.New()
 
@@ -61,7 +62,8 @@ func main() {
 
 	// Users
 	router.GET("/rooms/:roomID/users", h.GetUsersInRoom)
-	router.POST("/users", h.CreateUser)
+	router.POST("/users/register", h.CreateUser)
+	router.POST("/users/login", h.LoginUser)
 	router.GET("/users/:userID", h.GetUserInfo)
 
 	c := cors.New(cors.Options{
