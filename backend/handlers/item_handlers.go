@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"github.com/google/uuid"
 	"github.com/julienschmidt/httprouter"
-	"log"
 	"net/http"
 )
 
@@ -109,9 +108,10 @@ func (h *Handler) simplifyAndStore(roomID uuid.UUID, algoType algorithm.AlgoType
 		return nil, err
 	}
 
+	if len(items) == 0 {
+		return []models.SimplifiedItem{}, nil
+	}
 	simplifiedItems := h.Simplifier.SimplifyItems(items, algoType)
-
-	log.Println(simplifiedItems)
 
 	// TODO: lock DB row while processing
 	if err := h.DB.Where("room_id = ?", roomID).Delete(&models.SimplifiedItem{}).Error; err != nil {

@@ -145,7 +145,7 @@ const RoomPage = () => {
                 <select id="userDropdown" onChange={(e) => setNewFromUserID(e.target.value)} value={newFromUserID}>
                     <option value="" disabled>From...</option>
                     {users.map((user) => (
-                        <option key={user.id} value={user.id}>
+                        <option key={user.id} value={user.id} disabled={user.id === newToUserID}>
                             {user.name}
                         </option>
                     ))}
@@ -162,7 +162,7 @@ const RoomPage = () => {
                 <select id="userDropdown" onChange={(e) => setNewToUserID(e.target.value)} value={newToUserID}>
                     <option value="" disabled>To...</option>
                     {users.map((user) => (
-                        <option key={user.id} value={user.id}>
+                        <option key={user.id} value={user.id} disabled={user.id === newFromUserID}>
                             {user.name}
                         </option>
                     ))}
