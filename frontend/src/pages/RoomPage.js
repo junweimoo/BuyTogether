@@ -110,101 +110,177 @@ const RoomPage = () => {
     }
 
     return (
-        globalError !== '' ? NotFoundPage( globalError ) :
-        roomName === '' ? LoadingPage() :
-        <div>
-            <h1>Room {roomName}</h1>
-            <h4>{roomID}</h4>
-            <div>
-                <button onClick={handleBackToHome}>Back to home</button>
-            </div>
-            <div>
-                <h3>Logged in user:</h3>
-                <div>{loggedUsername}</div>
-                <div>{loggedUserId}</div>
-            </div>
-            <div>
-                <h3>Users: </h3>
-                <ul>
-                    {users.map((user) => (
-                        <li key={user.id}>
-                            {user.name}
-                            {user.id === loggedUserId && ' (me)'}
-                        </li>
-                    ))}
-                </ul>
-            </div>
-            <div>
-                <h3>Items: </h3>
-                <input
-                    type="text"
-                    value={newItemName}
-                    onChange={(e) => setNewItemName(e.target.value)}
-                    placeholder="Add a new item"
-                />
-                <select id="userDropdown" onChange={(e) => setNewFromUserID(e.target.value)} value={newFromUserID}>
-                    <option value="" disabled>From...</option>
-                    {users.map((user) => (
-                        <option key={user.id} value={user.id} disabled={user.id === newToUserID}>
-                            {user.name}
-                        </option>
-                    ))}
-                </select>
-                <input
-                    type="text"
-                    id="amount"
-                    value={newAmount}
-                    onChange={(e) => {
-                        if (/^\d*\.?\d{0,2}$/.test(e.target.value)) setNewAmount(e.target.value);
-                    }}
-                    placeholder="0.00"
-                />
-                <select id="userDropdown" onChange={(e) => setNewToUserID(e.target.value)} value={newToUserID}>
-                    <option value="" disabled>To...</option>
-                    {users.map((user) => (
-                        <option key={user.id} value={user.id} disabled={user.id === newFromUserID}>
-                            {user.name}
-                        </option>
-                    ))}
-                </select>
-                <button onClick={handleNewItem}>Post</button>
-                {newItemError !== '' && <div>{newItemError}</div>}
-                <ul>
-                    {items.map((item) => (
-                        <li key={item.id}>
-                            {item.content}
-                            {" "}
-                            {userMap.get(item.from_user_id)}
-                            {" "}
-                            {convertIntToStr(item.amount)}
-                            {" "}
-                            {userMap.get(item.to_user_id)}
-                            {" "}
-                            <button onClick={() => handleDeleteItem(item.id)}>x</button>
-                        </li>
-                    ))}
-                </ul>
-            </div>
-            <div>
-                <h3>Settlements: </h3>
-                <button onClick={() => handleSimplify(0)}>Reset</button>
-                <button onClick={() => handleSimplify(1)}>Greedy</button>
-                <button onClick={() => handleSimplify(2)}>Preserve</button>
-                <br/><br/>
-                {simplifiedItems.map((item) => (
-                    <li key={item.id}>
-                        {item.content}
-                        {" "}
-                        {userMap.get(item.from_user_id)}
-                        {" "}
-                        {convertIntToStr(item.amount)}
-                        {" "}
-                        {userMap.get(item.to_user_id)}
-                        {" "}
-                    </li>
-                ))}
-            </div>
-        </div>
+        globalError !== '' ? NotFoundPage(globalError) :
+            roomName === '' ? LoadingPage() :
+                <div className="min-h-screen bg-gray-100">
+                    {/* Top Bar */}
+                    <div className="bg-blue-600 text-white flex justify-between items-center px-6 py-4">
+                        <div className="flex space-x-4 items-center">
+                            {/* Room Name */}
+                            <div className="text-xl font-semibold">
+                                Room: {roomName}
+                            </div>
+                            {/* Room ID with Copy Button */}
+                            <div className="flex items-center space-x-2">
+                                <span className="text-gray-300">ID: {roomID}</span>
+                                <button
+                                    className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded"
+                                    onClick={() => navigator.clipboard.writeText(roomID)}
+                                >
+                                    Copy ID
+                                </button>
+                            </div>
+                        </div>
+                        {/* Logged In User Info */}
+                        <div className="flex items-center space-x-4">
+                            <div>
+                                Logged in as: <span className="font-bold">{loggedUsername}</span>
+                            </div>
+                            <button
+                                className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+                                onClick={handleBackToHome}
+                            >
+                                Back to Home
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Main Content */}
+                    <div className="p-6">
+                        {/* Users List */}
+                        <div className="bg-white shadow-md rounded p-6 mb-4">
+                            <h3 className="text-xl font-semibold mb-2">Users</h3>
+                            <ul className="list-disc list-inside space-y-2">
+                                {users.map((user) => (
+                                    <li key={user.id} className="text-lg">
+                                        {user.name}
+                                        {user.id === loggedUserId && <span className="text-blue-500 ml-2">(me)</span>}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+
+                        {/* Items List */}
+                        <div className="bg-white shadow-md rounded p-6 mb-4">
+                            <h3 className="text-xl font-semibold mb-4">Items</h3>
+                            <div className="flex items-center space-x-4 mb-4">
+                                <input
+                                    type="text"
+                                    className="border rounded p-2 flex-grow"
+                                    value={newItemName}
+                                    onChange={(e) => setNewItemName(e.target.value)}
+                                    placeholder="Add a new item"
+                                />
+                                <select
+                                    id="userDropdown"
+                                    className="border rounded p-2"
+                                    onChange={(e) => setNewFromUserID(e.target.value)}
+                                    value={newFromUserID}
+                                >
+                                    <option value="" disabled>From...</option>
+                                    {users.map((user) => (
+                                        <option key={user.id} value={user.id} disabled={user.id === newToUserID}>
+                                            {user.name}
+                                        </option>
+                                    ))}
+                                </select>
+                                <input
+                                    type="text"
+                                    className="border rounded p-2 w-24"
+                                    id="amount"
+                                    value={newAmount}
+                                    onChange={(e) => {
+                                        if (/^\d*\.?\d{0,2}$/.test(e.target.value)) setNewAmount(e.target.value);
+                                    }}
+                                    placeholder="0.00"
+                                />
+                                <select
+                                    id="userDropdown"
+                                    className="border rounded p-2"
+                                    onChange={(e) => setNewToUserID(e.target.value)}
+                                    value={newToUserID}
+                                >
+                                    <option value="" disabled>To...</option>
+                                    {users.map((user) => (
+                                        <option key={user.id} value={user.id} disabled={user.id === newFromUserID}>
+                                            {user.name}
+                                        </option>
+                                    ))}
+                                </select>
+                                <button
+                                    className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+                                    onClick={handleNewItem}
+                                >
+                                    Post
+                                </button>
+                            </div>
+                            {newItemError && <div className="text-red-500 mb-4">{newItemError}</div>}
+                            <ul className="space-y-2">
+                                {items.map((item) => (
+                                    <li key={item.id} className="flex justify-between items-center p-4 border rounded">
+                                        <div className="text-lg">
+                                            {item.content}
+                                            {" "}
+                                            <span className="text-gray-500">({userMap.get(item.from_user_id)})</span>
+                                            {" "}
+                                            <span className="font-bold">{convertIntToStr(item.amount)}</span>
+                                            {" "}
+                                            <span className="text-gray-500">to</span>
+                                            {" "}
+                                            <span className="text-gray-500">({userMap.get(item.to_user_id)})</span>
+                                        </div>
+                                        <button
+                                            className="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded"
+                                            onClick={() => handleDeleteItem(item.id)}
+                                        >
+                                            x
+                                        </button>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+
+                        {/* Settlements Section */}
+                        <div className="bg-white shadow-md rounded p-6 mb-4">
+                            <h3 className="text-xl font-semibold mb-4">Settlements</h3>
+                            <div className="space-x-4 mb-4">
+                                <button
+                                    className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
+                                    onClick={() => handleSimplify(0)}
+                                >
+                                    Reset
+                                </button>
+                                <button
+                                    className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+                                    onClick={() => handleSimplify(1)}
+                                >
+                                    Greedy
+                                </button>
+                                <button
+                                    className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+                                    onClick={() => handleSimplify(2)}
+                                >
+                                    Preserve
+                                </button>
+                            </div>
+                            <ul className="space-y-2">
+                                {simplifiedItems.map((item) => (
+                                    <li key={item.id} className="p-4 border rounded">
+                                        {item.content}
+                                        {" "}
+                                        <span className="text-gray-500">{userMap.get(item.from_user_id)}</span>
+                                        {" "}
+                                        <span className="font-bold">{convertIntToStr(item.amount)}</span>
+                                        {" "}
+                                        <span className="text-gray-500">to</span>
+                                        {" "}
+                                        <span className="text-gray-500">{userMap.get(item.to_user_id)}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
     );
 };
 

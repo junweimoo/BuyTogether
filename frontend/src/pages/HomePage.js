@@ -141,98 +141,175 @@ const HomePage = () => {
     }
 
     return (
-        <div>
-            <h1>Welcome to BuyTogether</h1>
-            {loggedJWT
-                ? <div>
-                    <h3>Logged in user:</h3>
-                    <div>{loggedUsername}</div>
-                    <div>{loggedUserId}</div>
-                    <button onClick={handleLogout}>Logout</button>
-                    <h4>Rooms:</h4>
-                    <ul>
-                        {rooms.map((room) => (
-                            <li key={room.id}>
-                                {room.name}
-                                {" "}
-                                ({room.id})
-                                {" "}
-                                <button onClick={() => handleJoinRoom(room.id)}>Enter</button>
-                                <button onClick={() => handleLeaveRoom(room.id)}>Leave</button>
-                            </li>
-                        ))}
-                    </ul>
+        <div className="min-h-screen bg-gray-100">
+            {/* Top Bar */}
+            <div className="bg-blue-600 text-white flex justify-between items-center px-6 py-4">
+                <div className="text-xl font-semibold">
+                    BuyTogether
                 </div>
-                : <div>
-                    <h3>Not logged in</h3>
+                <div className="flex items-center space-x-4">
+                    {loggedJWT ? (
+                        <>
+                            <div>
+                                Logged in as:
+                                <span className="ml-1 font-bold">{loggedUsername}</span>
+                            </div>
+                            <div>
+                                <button
+                                    className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded"
+                                    onClick={() => navigator.clipboard.writeText(loggedUserId)}
+                                >
+                                    Copy User ID
+                                </button>
+                            </div>
+                            <button
+                                className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+                                onClick={handleLogout}
+                            >
+                                Logout
+                            </button>
+                        </>
+                    ) : (
+                        <>
+                            <button
+                                className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+                                onClick={() => setShowRegister(!showRegister)}
+                            >
+                                {showRegister ? "Login" : "Register"}
+                            </button>
+                        </>
+                    )}
                 </div>
-            }
-            <br/>
-            <div>
-                <button onClick={() => setShowRegister(!showRegister)}>
-                    {showRegister ? "Login instead" : "Register instead"}
-                </button>
             </div>
-            {showRegister
-                ?
-                <div>
-                    <h3>Register</h3>
-                    <input
-                        type="text"
-                        value={newUsername}
-                        onChange={(e) => setNewUsername(e.target.value)}
-                        placeholder="Enter Username"
-                    />
-                    <input
-                        type="text"
-                        value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
-                        placeholder="Enter Password"
-                    />
-                    <button onClick={handleRegisterUser}>Register</button>
-                    {registerUserError !== '' && <div>{registerUserError}</div>}
+
+            {/* Login / Register Form */}
+            {!loggedJWT && (
+                <div className="p-6 bg-white shadow-md rounded mt-4 mx-auto w-full max-w-md">
+                    {showRegister ? (
+                        <div>
+                            <h3 className="text-2xl font-bold mb-4">Register</h3>
+                            <input
+                                type="text"
+                                className="border rounded w-full p-2 mb-4"
+                                value={newUsername}
+                                onChange={(e) => setNewUsername(e.target.value)}
+                                placeholder="Enter Username"
+                            />
+                            <input
+                                type="password"
+                                className="border rounded w-full p-2 mb-4"
+                                value={newPassword}
+                                onChange={(e) => setNewPassword(e.target.value)}
+                                placeholder="Enter Password"
+                            />
+                            <button
+                                className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded w-full"
+                                onClick={handleRegisterUser}
+                            >
+                                Register
+                            </button>
+                            {registerUserError && <div className="text-red-500 mt-2">{registerUserError}</div>}
+                        </div>
+                    ) : (
+                        <div>
+                            <h3 className="text-2xl font-bold mb-4">Login</h3>
+                            <input
+                                type="text"
+                                className="border rounded w-full p-2 mb-4"
+                                value={loginUsername}
+                                onChange={(e) => setLoginUsername(e.target.value)}
+                                placeholder="Enter Username"
+                            />
+                            <input
+                                type="password"
+                                className="border rounded w-full p-2 mb-4"
+                                value={loginPassword}
+                                onChange={(e) => setLoginPassword(e.target.value)}
+                                placeholder="Enter Password"
+                            />
+                            <button
+                                className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded w-full"
+                                onClick={handleLoginUser}
+                            >
+                                Login
+                            </button>
+                            {loginUserError && <div className="text-red-500 mt-2">{loginUserError}</div>}
+                        </div>
+                    )}
                 </div>
-                :
-                <div>
-                    <h3>Login</h3>
-                    <input
-                        type="text"
-                        value={loginUsername}
-                        onChange={(e) => setLoginUsername(e.target.value)}
-                        placeholder="Enter Username"
-                    />
-                    <input
-                        type="text"
-                        value={loginPassword}
-                        onChange={(e) => setLoginPassword(e.target.value)}
-                        placeholder="Enter Password"
-                    />
-                    <button onClick={handleLoginUser}>Login</button>
-                    {loginUserError !== '' && <div>{loginUserError}</div>}
-                </div>
-            }
-            <br/>
-            <div>
-                <h3>Join / create room</h3>
-                <div>
-                    <input
-                        type="text"
-                        value={newRoomName}
-                        onChange={(e) => setNewRoomName(e.target.value)}
-                        placeholder="New Room Name"
-                    />
-                    <button onClick={handleCreateRoom}>Create a New Room</button>
-                </div>
-                {createRoomError && <div>{createRoomError}</div>}
-                <br/>
-                <input
-                    type="text"
-                    value={newRoomID}
-                    onChange={(e) => setnewRoomID(e.target.value)}
-                    placeholder="Enter Room ID"
-                />
-                <button onClick={() => handleJoinRoom(newRoomID)}>Join Room</button>
-                {joinRoomError !== '' && <div>{joinRoomError}</div>}
+            )}
+
+            {/* Main section */}
+            <div className="p-6">
+                {/* Create / Join Room Section */}
+                {loggedJWT && (
+                    <div className="p-6 bg-white shadow-md rounded mt-4 w-full">
+                        <h3 className="text-2xl font-bold mb-4">Join / Create Room</h3>
+                        <div className="mb-4">
+                            <input
+                                type="text"
+                                className="border rounded w-full p-2 mb-4"
+                                value={newRoomName}
+                                onChange={(e) => setNewRoomName(e.target.value)}
+                                placeholder="New Room Name"
+                            />
+                            <button
+                                className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded w-full"
+                                onClick={handleCreateRoom}
+                            >
+                                Create a New Room
+                            </button>
+                            {createRoomError && <div className="text-red-500 mt-2">{createRoomError}</div>}
+                        </div>
+                        <div className="mb-4">
+                            <input
+                                type="text"
+                                className="border rounded w-full p-2 mb-4"
+                                value={newRoomID}
+                                onChange={(e) => setnewRoomID(e.target.value)}
+                                placeholder="Enter Room ID"
+                            />
+                            <button
+                                className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded w-full"
+                                onClick={() => handleJoinRoom(newRoomID)}
+                            >
+                                Join Room
+                            </button>
+                            {joinRoomError && <div className="text-red-500 mt-2">{joinRoomError}</div>}
+                        </div>
+                    </div>
+                )}
+
+                {/* Rooms List */}
+                {loggedJWT && (
+                    <div className="p-6 bg-white shadow-md rounded mt-4 w-full">
+                        <h4 className="text-xl font-bold mb-4">Rooms:</h4>
+                        <ul className="space-y-4">
+                            {rooms.map((room) => (
+                                <li key={room.id} className="border rounded p-4 flex justify-between items-center">
+                                    <div>
+                                        {room.name} <span className="text-gray-500">({room.id})</span>
+                                    </div>
+                                    <div className="space-x-2">
+                                        <button
+                                            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded"
+                                            onClick={() => handleJoinRoom(room.id)}
+                                        >
+                                            Enter
+                                        </button>
+                                        <button
+                                            className="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded"
+                                            onClick={() => handleLeaveRoom(room.id)}
+                                        >
+                                            Leave
+                                        </button>
+                                    </div>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
+
             </div>
         </div>
     );
