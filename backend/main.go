@@ -2,6 +2,7 @@ package main
 
 import (
 	"backend/algorithm"
+	"backend/middleware"
 	"fmt"
 	"github.com/joho/godotenv"
 	"github.com/rs/cors"
@@ -42,8 +43,9 @@ func main() {
 	db.AutoMigrate(&models.Room{}, &models.Item{}, &models.User{})
 
 	simplifier := algorithm.Simplifier{}
+	auth := middleware.Auth{JWTKey: []byte(jwtkey)}
 
-	h := handlers.Handler{DB: db, Simplifier: &simplifier, JWTKey: []byte(jwtkey)}
+	h := handlers.Handler{DB: db, Simplifier: &simplifier, Auth: &auth}
 
 	router := httprouter.New()
 
@@ -52,6 +54,7 @@ func main() {
 	router.GET("/rooms/:roomID", h.GetRoomInfo)
 	router.POST("/rooms/:roomID", h.JoinRoom)
 	router.POST("/rooms/:roomID/leave", h.LeaveRoom)
+	router.GET("/rooms/:roomID/users", h.GetUsersInRoom)
 
 	// Items
 	router.GET("/rooms/:roomID/items", h.GetItems)
@@ -61,10 +64,9 @@ func main() {
 	router.POST("/rooms/:roomID/simplify", h.SimplifyItems)
 
 	// Users
-	router.GET("/rooms/:roomID/users", h.GetUsersInRoom)
 	router.POST("/users/register", h.CreateUser)
 	router.POST("/users/login", h.LoginUser)
-	router.GET("/users/:userID", h.GetUserInfo)
+	router.GET("/users/:userID", auth.JWTAuth(h.GetUserInfo))
 
 	c := cors.New(cors.Options{
 		AllowedOrigins: []string{"*"},

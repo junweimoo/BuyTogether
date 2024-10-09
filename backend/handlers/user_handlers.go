@@ -3,12 +3,10 @@ package handlers
 import (
 	"backend/models"
 	"encoding/json"
-	"github.com/dgrijalva/jwt-go"
 	"github.com/google/uuid"
 	"github.com/julienschmidt/httprouter"
 	"golang.org/x/crypto/bcrypt"
 	"net/http"
-	"time"
 )
 
 func (h *Handler) GetUsersInRoom(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
@@ -147,13 +145,7 @@ func (h *Handler) LoginUser(w http.ResponseWriter, r *http.Request, ps httproute
 		return
 	}
 
-	expirationTime := time.Now().Add(12 * time.Hour) // Token expires in 1 hour
-	claims := &jwt.StandardClaims{
-		Subject:   user.ID.String(),
-		ExpiresAt: expirationTime.Unix(),
-	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString(h.JWTKey)
+	tokenString, err := h.Auth.GenerateToken(&user)
 	if err != nil {
 		http.Error(w, "Failed to generate token", http.StatusInternalServerError)
 		return
