@@ -111,7 +111,12 @@ func (h *Handler) simplifyAndStore(roomID uuid.UUID, algoType algorithm.AlgoType
 	if len(items) == 0 {
 		return []models.SimplifiedItem{}, nil
 	}
+
 	simplifiedItems := h.Simplifier.SimplifyItems(items, algoType)
+
+	if len(simplifiedItems) == 0 {
+		return []models.SimplifiedItem{}, nil
+	}
 
 	// TODO: lock DB row while processing
 	if err := h.DB.Where("room_id = ?", roomID).Delete(&models.SimplifiedItem{}).Error; err != nil {

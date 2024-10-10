@@ -4,6 +4,7 @@ import api from '../Api';
 import Cookies from "js-cookie";
 import NotFoundPage from "./NotFoundPage";
 import LoadingPage from "./LoadingPage";
+import { BsCaretLeftFill } from "react-icons/bs";
 
 const RoomPage = () => {
     const { roomID } = useParams();
@@ -26,7 +27,19 @@ const RoomPage = () => {
     const [globalError, setGlobalError] = useState('');
     const [newItemError, setNewItemError] = useState('');
 
+    const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+    const thresholdWidth = 650;
+    const minWidth = 400;
+
     const navigate = useNavigate();
+
+    useEffect(() => {
+        const handleResize = () => setWindowWidth(window.innerWidth);
+        window.addEventListener('resize', handleResize);
+        setWindowWidth(window.innerWidth);
+
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     useEffect(() => {
         const sessionUser = Cookies.get('session_user');
@@ -65,6 +78,10 @@ const RoomPage = () => {
     }
 
     const handleNewItem = () => {
+        if (newItemName === '') {
+            setNewItemError('Please enter a name for this item');
+            return;
+        }
         api.post(`/rooms/${roomID}/items`, {
                 content: newItemName,
                 from_user_id: newFromUserID,
@@ -76,6 +93,7 @@ const RoomPage = () => {
                 setSimplifiedItems(response.data.simplifiedItems);
                 setNewItemName('');
                 setNewAmount('');
+                setNewItemError('');
             })
             .catch(error => {
                 console.error('Error retrieving item:', error);
@@ -112,36 +130,40 @@ const RoomPage = () => {
     return (
         globalError !== '' ? NotFoundPage(globalError) :
             roomName === '' ? LoadingPage() :
-                <div className="min-h-screen bg-gray-100">
+                <div className="min-h-screen bg-gray-100" style={{ minWidth: `${minWidth}px`}}>
                     {/* Top Bar */}
-                    <div className="bg-blue-600 text-white flex justify-between items-center px-6 py-4">
-                        <div className="flex space-x-4 items-center">
+                    <div className="bg-blue-600 text-white flex justify-between items-center px-4 py-4">
+                        <div className="flex space-x-3 items-center">
+                            <button
+                                className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+                                onClick={handleBackToHome}>
+                                <BsCaretLeftFill/>
+                            </button>
                             {/* Room Name */}
-                            <div className="text-xl font-semibold">
-                                Room: {roomName}
+                            <div className="pl-3 text-xl font-semibold">
+                                {roomName}
                             </div>
-                            {/* Room ID with Copy Button */}
+                            <button
+                                className="border-2 text-sm bg-blue-500 hover:bg-blue-700 text-white font-bold py-0 px-3 rounded"
+                                onClick={() => navigator.clipboard.writeText(roomID)}>
+                                Copy ID
+                            </button>
                             <div className="flex items-center space-x-2">
-                                <span className="text-gray-300">ID: {roomID}</span>
-                                <button
-                                    className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded"
-                                    onClick={() => navigator.clipboard.writeText(roomID)}
-                                >
-                                    Copy ID
-                                </button>
+                                {/*{ windowWidth > thresholdWidth && <span className="text-gray-300">ID: {roomID}</span>}*/}
                             </div>
                         </div>
                         {/* Logged In User Info */}
-                        <div className="flex items-center space-x-4">
-                            <div>
+                        <div className="ml-auto flex items-center space-x-4">
+                            {windowWidth > thresholdWidth && <div className="ml-2 items-center">
                                 Logged in as: <span className="font-bold">{loggedUsername}</span>
-                            </div>
-                            <button
-                                className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
-                                onClick={handleBackToHome}
-                            >
-                                Back to Home
-                            </button>
+                            </div>}
+                            {/*<button*/}
+                            {/*    className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-3 rounded"*/}
+                            {/*    onClick={handleBackToHome}*/}
+                            {/*>*/}
+                            {/*    Home*/}
+                            {/*</button>*/}
+                            {/* Room ID with Copy Button */}
                         </div>
                     </div>
 
@@ -163,58 +185,60 @@ const RoomPage = () => {
                         {/* Items List */}
                         <div className="bg-white shadow-md rounded p-6 mb-4">
                             <h3 className="text-xl font-semibold mb-4">Items</h3>
-                            <div className="flex items-center space-x-4 mb-4">
-                                <input
-                                    type="text"
-                                    className="border rounded p-2 flex-grow"
-                                    value={newItemName}
-                                    onChange={(e) => setNewItemName(e.target.value)}
-                                    placeholder="Add a new item"
-                                />
-                                <select
-                                    id="userDropdown"
-                                    className="border rounded p-2"
-                                    onChange={(e) => setNewFromUserID(e.target.value)}
-                                    value={newFromUserID}
-                                >
-                                    <option value="" disabled>From...</option>
-                                    {users.map((user) => (
-                                        <option key={user.id} value={user.id} disabled={user.id === newToUserID}>
-                                            {user.name}
-                                        </option>
-                                    ))}
-                                </select>
-                                <input
-                                    type="text"
-                                    className="border rounded p-2 w-24"
-                                    id="amount"
-                                    value={newAmount}
-                                    onChange={(e) => {
-                                        if (/^\d*\.?\d{0,2}$/.test(e.target.value)) setNewAmount(e.target.value);
-                                    }}
-                                    placeholder="0.00"
-                                />
-                                <select
-                                    id="userDropdown"
-                                    className="border rounded p-2"
-                                    onChange={(e) => setNewToUserID(e.target.value)}
-                                    value={newToUserID}
-                                >
-                                    <option value="" disabled>To...</option>
-                                    {users.map((user) => (
-                                        <option key={user.id} value={user.id} disabled={user.id === newFromUserID}>
-                                            {user.name}
-                                        </option>
-                                    ))}
-                                </select>
-                                <button
-                                    className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
-                                    onClick={handleNewItem}
-                                >
-                                    Post
-                                </button>
+                            <div className="mb-8">
+                                <div className="flex flex-wrap items-center space-x-4 mb-4">
+                                    <input
+                                        type="text"
+                                        className="border rounded p-2 flex-grow"
+                                        value={newItemName}
+                                        onChange={(e) => setNewItemName(e.target.value)}
+                                        placeholder="Add a new item"
+                                    />
+                                    <select
+                                        id="userDropdown"
+                                        className="border rounded p-2"
+                                        onChange={(e) => setNewFromUserID(e.target.value)}
+                                        value={newFromUserID}
+                                    >
+                                        <option value="" disabled>From...</option>
+                                        {users.map((user) => (
+                                            <option key={user.id} value={user.id} disabled={user.id === newToUserID}>
+                                                {user.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <input
+                                        type="text"
+                                        className="border rounded p-2 w-24"
+                                        id="amount"
+                                        value={newAmount}
+                                        onChange={(e) => {
+                                            if (/^\d*\.?\d{0,2}$/.test(e.target.value)) setNewAmount(e.target.value);
+                                        }}
+                                        placeholder="0.00"
+                                    />
+                                    <select
+                                        id="userDropdown"
+                                        className="border rounded p-2"
+                                        onChange={(e) => setNewToUserID(e.target.value)}
+                                        value={newToUserID}
+                                    >
+                                        <option value="" disabled>To...</option>
+                                        {users.map((user) => (
+                                            <option key={user.id} value={user.id} disabled={user.id === newFromUserID}>
+                                                {user.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <button
+                                        className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+                                        onClick={handleNewItem}
+                                    >
+                                        Post
+                                    </button>
+                                </div>
+                                {newItemError && <div className="text-red-500 mb-4">{newItemError}</div>}
                             </div>
-                            {newItemError && <div className="text-red-500 mb-4">{newItemError}</div>}
                             <ul className="space-y-2">
                                 {items.map((item) => (
                                     <li key={item.id} className="flex justify-between items-center p-4 border rounded">

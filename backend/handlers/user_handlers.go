@@ -120,7 +120,7 @@ func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request, ps httprout
 	}
 
 	response := map[string]interface{}{
-		"message": "User created",
+		"message": "USER_CREATED",
 		"success": true,
 	}
 	w.Header().Set("Content-Type", "application/json")

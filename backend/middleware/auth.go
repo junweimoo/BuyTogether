@@ -20,7 +20,7 @@ func (a *Auth) JWTAuth(next httprouter.Handle) httprouter.Handle {
 	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		authHeader := r.Header.Get("Authorization")
 		if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
-			http.Error(w, "Missing or invalid token", http.StatusUnauthorized)
+			http.Error(w, "INVALID_TOKEN", http.StatusUnauthorized)
 			return
 		}
 
@@ -32,13 +32,13 @@ func (a *Auth) JWTAuth(next httprouter.Handle) httprouter.Handle {
 		})
 
 		if err != nil || !token.Valid {
-			http.Error(w, "Invalid token", http.StatusUnauthorized)
+			http.Error(w, "INVALID_TOKEN", http.StatusUnauthorized)
 			return
 		}
 
 		userID, err := uuid.Parse(claims.Subject)
 		if err != nil {
-			http.Error(w, "Invalid user ID in token", http.StatusInternalServerError)
+			http.Error(w, "INVALID_USER_ID", http.StatusInternalServerError)
 		}
 		ctx := context.WithValue(r.Context(), "userID", userID)
 		next(w, r.WithContext(ctx), ps)

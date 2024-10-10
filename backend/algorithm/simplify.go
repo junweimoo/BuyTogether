@@ -37,7 +37,7 @@ func (s *Simplifier) SimplifyItems(items []models.Item, algoChoice AlgoType) []m
 	case PreserveEdges:
 		return s.greedyAlgorithm(items)
 	}
-	return nil
+	return s.noSimplify(items)
 }
 
 func (s *Simplifier) noSimplify(items []models.Item) []models.SimplifiedItem {

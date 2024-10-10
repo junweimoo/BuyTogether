@@ -1,6 +1,7 @@
 import React, {useEffect, useState} from 'react';
 import Cookies from 'js-cookie';
 import { useNavigate } from 'react-router-dom';
+import { FaRegClipboard } from 'react-icons/fa';
 import api from '../Api';
 
 const HomePage = () => {
@@ -11,7 +12,9 @@ const HomePage = () => {
 
     const [newUsername, setNewUsername] = useState('');
     const [newPassword, setNewPassword] = useState('');
+    const [newPasswordSecond, setNewPasswordSecond] = useState('');
     const [registerUserError, setRegisterUserError] = useState('');
+    const [registerUserSuccess, setRegisterUserSuccess] = useState('');
 
     const [loginUsername, setLoginUsername] = useState('');
     const [loginPassword, setLoginPassword] = useState('');
@@ -22,11 +25,28 @@ const HomePage = () => {
     const [loggedJWT, setLoggedJWT] = useState('');
     const [rooms, setRooms] = useState([]);
 
+    const [globalError, setGlobalError] = useState('');
     const [joinRoomError, setJoinRoomError] = useState('');
     const [createRoomError, setCreateRoomError] = useState('');
     const [leaveRoomError, setLeaveRoomError] = useState('');
+
+    const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+    const thresholdWidth = 650;
+    const minWidth = 400;
+
+    const [isDialogOpen, setDialogOpen] = useState(false);
+    const [dialogMsg, setDialogMsg] = useState('');
+    const [dialogCloseFn, setDialogCloseFn] = useState(() => {});
     
     const navigate = useNavigate();
+
+    useEffect(() => {
+        const handleResize = () => setWindowWidth(window.innerWidth);
+        window.addEventListener('resize', handleResize);
+        setWindowWidth(window.innerWidth);
+
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     useEffect(() => {
         const sessionUser = Cookies.get('session_user');
@@ -48,7 +68,8 @@ const HomePage = () => {
                 const userRooms = response.data.rooms;
                 setRooms(userRooms);
             }).catch(error => {
-            console.error('Error retrieving user info:', error);
+                setGlobalError(error.response.data);
+                console.error('Error retrieving user info:', error);
         });
     }, [loggedJWT])
 
@@ -95,11 +116,17 @@ const HomePage = () => {
 
     const handleRegisterUser = () => {
         if (newUsername.trim() && newPassword.trim()) {
+            if (newPassword != newPasswordSecond) {
+                setRegisterUserError('Your passwords did not match');
+                return;
+            }
             api.post('/users/register', { name: newUsername, password_hash: newPassword })
                 .then(response => {
                     setNewUsername("");
                     setNewPassword("");
-                    setRegisterUserError(response.data.message);
+                    setNewPasswordSecond("");
+                    setRegisterUserSuccess(true);
+                    setRegisterUserError('');
                 })
                 .catch(error => {
                     console.error('Error while registering:', error);
@@ -118,7 +145,7 @@ const HomePage = () => {
 
                     setLoginUsername("");
                     setLoginPassword("");
-                    setLoginUserError(response.data.message);
+                    // setLoginUserError(response.data.message);
 
                     Cookies.set('session_user', JSON.stringify({
                         userId: response.data.user.id,
@@ -141,29 +168,32 @@ const HomePage = () => {
     }
 
     return (
-        <div className="min-h-screen bg-gray-100">
+        <div className="min-h-screen bg-gray-100" style={{ minWidth: `${minWidth}px` }}>
             {/* Top Bar */}
             <div className="bg-blue-600 text-white flex justify-between items-center px-6 py-4">
                 <div className="text-xl font-semibold">
-                    BuyTogether
+                    {windowWidth > thresholdWidth ? "BuyTogether" : "BT"}
                 </div>
-                <div className="flex items-center space-x-4">
+                <div className="ml-auto flex items-center space-x-4">
                     {loggedJWT ? (
                         <>
                             <div>
-                                Logged in as:
+                                {windowWidth > thresholdWidth && "Logged in as:"}
                                 <span className="ml-1 font-bold">{loggedUsername}</span>
                             </div>
                             <div>
                                 <button
-                                    className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded"
+                                    className="bg-blue-500 hover:bg-blue-700 text-white items-center font-bold py-1 px-2 rounded"
                                     onClick={() => navigator.clipboard.writeText(loggedUserId)}
                                 >
-                                    Copy User ID
+                                    {windowWidth > thresholdWidth
+                                        ? "Copy ID"
+                                        : "Copy ID"
+                                    }
                                 </button>
                             </div>
                             <button
-                                className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+                                className="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded"
                                 onClick={handleLogout}
                             >
                                 Logout
@@ -172,7 +202,7 @@ const HomePage = () => {
                     ) : (
                         <>
                             <button
-                                className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+                                className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded"
                                 onClick={() => setShowRegister(!showRegister)}
                             >
                                 {showRegister ? "Login" : "Register"}
@@ -202,6 +232,13 @@ const HomePage = () => {
                                 onChange={(e) => setNewPassword(e.target.value)}
                                 placeholder="Enter Password"
                             />
+                            <input
+                                type="password"
+                                className="border rounded w-full p-2 mb-4"
+                                value={newPasswordSecond}
+                                onChange={(e) => setNewPasswordSecond(e.target.value)}
+                                placeholder="Confirm Password"
+                            />
                             <button
                                 className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded w-full"
                                 onClick={handleRegisterUser}
@@ -209,6 +246,10 @@ const HomePage = () => {
                                 Register
                             </button>
                             {registerUserError && <div className="text-red-500 mt-2">{registerUserError}</div>}
+                            {registerUserSuccess && <div
+                                className="text-green-600 mt-2">Account created! You may now <span
+                                className="text-blue-500" onClick={() => setShowRegister(false)}>login</span>.
+                            </div>}
                         </div>
                     ) : (
                         <div>
@@ -287,10 +328,11 @@ const HomePage = () => {
                         <ul className="space-y-4">
                             {rooms.map((room) => (
                                 <li key={room.id} className="border rounded p-4 flex justify-between items-center">
-                                    <div>
-                                        {room.name} <span className="text-gray-500">({room.id})</span>
+                                    <div className="space-y-1 flex-col">
+                                        <div className="text-bold">{room.name}</div>
+                                        <div className="text-gray-500">({room.id})</div>
                                     </div>
-                                    <div className="space-x-2">
+                                    <div className={windowWidth > thresholdWidth ? "ml-auto space-x-2" : "space-y-2 ml-auto flex flex-col"} >
                                         <button
                                             className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded"
                                             onClick={() => handleJoinRoom(room.id)}
@@ -299,7 +341,15 @@ const HomePage = () => {
                                         </button>
                                         <button
                                             className="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded"
-                                            onClick={() => handleLeaveRoom(room.id)}
+                                            // onClick={() => handleLeaveRoom(room.id)}
+                                            onClick={() => {
+                                                setDialogMsg("Are you sure you want to leave?");
+                                                setDialogCloseFn(() => () => {
+                                                    setDialogOpen(false);
+                                                    handleLeaveRoom(room.id);
+                                                });
+                                                setDialogOpen(true);
+                                            }}
                                         >
                                             Leave
                                         </button>
@@ -309,7 +359,36 @@ const HomePage = () => {
                         </ul>
                     </div>
                 )}
+            </div>
 
+            {/* Confirmation dialog */}
+            <CenteredAlert message={dialogMsg} isOpen={isDialogOpen} onClose={dialogCloseFn} onCancel={() => setDialogOpen(false)} />
+        </div>
+    );
+};
+
+const CenteredAlert = ({ message, isOpen, onClose, onCancel }) => {
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white p-6 rounded-lg shadow-lg w-2/3 max-w-md text-center">
+                <h2 className="text-xl font-semibold mb-4">Alert</h2>
+                <p className="mb-6">{message}</p>
+                <div className="items-center space-x-4">
+                    <button
+                        onClick={onCancel}
+                        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onClick={onClose}
+                        className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+                    >
+                        Confirm
+                    </button>
+                </div>
             </div>
         </div>
     );
