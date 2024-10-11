@@ -40,6 +40,9 @@ const RoomPage = () => {
     const tabs = ['Expense', 'Income', 'Transfer'];
     const [activeTab, setActiveTab] = useState(tabs[0]);
 
+    const [showTransactions, setShowTransactions] = useState(true);
+    const [showSettlements, setShowSettlements] = useState(true);
+
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -247,6 +250,26 @@ const RoomPage = () => {
             })
             .catch(error => {
                 console.error('Error retrieving item:', error);
+                setNewItemError(error.response.data);
+            });
+    }
+
+    const handleSettle = (sItem) => {
+        api.post(`/rooms/${roomID}/items`, {
+            content: userMap.get(sItem.from_user_id) + " pays " + userMap.get(sItem.to_user_id),
+            to_user_id: sItem.from_user_id,
+            from_user_id: sItem.to_user_id,
+            amount: sItem.amount,
+        }, { headers: { Authorization: `Bearer ${loggedJWT}` }})
+            .then((response) => {
+                setItems([...items, response.data.newItem]);
+                setSimplifiedItems(response.data.simplifiedItems);
+                setNewItemName('');
+                setNewAmount('');
+                setNewItemError('');
+            })
+            .catch(error => {
+                console.error('Error creating item:', error);
                 setNewItemError(error.response.data);
             });
     }
@@ -650,46 +673,53 @@ const RoomPage = () => {
 
                         {/* Settlements Section */}
                         <div className="bg-white shadow-md rounded p-6 mb-4">
-                            <h3 className="text-xl font-semibold mb-4">Settlements</h3>
-                            <div className="space-x-4 mb-4">
-                                <button
-                                    className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
-                                    onClick={() => handleSimplify(0)}
-                                >
-                                    Reset
-                                </button>
-                                <button
-                                    className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-                                    onClick={() => handleSimplify(1)}
-                                >
-                                    Greedy
-                                </button>
-                                <button
-                                    className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
-                                    onClick={() => handleSimplify(2)}
-                                >
-                                    Preserve
-                                </button>
+                            <div className="flex space-x-2" onClick={() => setShowSettlements(!showSettlements)}>
+                                <h3 className="text-xl font-semibold mb-4">Settlements</h3>
+                                <h3>{showSettlements ? '▲' : '▼'}</h3>
                             </div>
-                            <ul className="space-y-2">
-                                {simplifiedItems.map((item) => (
-                                    <li key={item.id} className={ windowWidth < thresholdWidth ? "p-4 border rounded flex flex-col" : "p-4 border rounded" }>
-                                        {item.content}
-                                        {" "}
-                                        <span className="text-blue-600">{userMap.get(item.from_user_id)}</span>
-                                        {" "}
-                                        <span>
-                                        <span className="text-gray-500">pays</span>
-                                        {" "}
-                                        <span className="font-bold">{convertIntToStr(item.amount)}</span>
-                                        {" "}
-                                        <span className="text-gray-500">to</span>
-                                        </span>
-                                        {" "}
-                                        <span className="text-orange-600">{userMap.get(item.to_user_id)}</span>
-                                    </li>
-                                ))}
-                            </ul>
+                            {showSettlements && <div>
+                                <div className="space-x-4 mb-4 border p-2">
+                                    <span className="text-lg">Algo:</span>
+                                    <button
+                                        className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
+                                        onClick={() => handleSimplify(0)}
+                                    >
+                                        Reset
+                                    </button>
+                                    <button
+                                        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+                                        onClick={() => handleSimplify(1)}
+                                    >
+                                        Greedy
+                                    </button>
+                                    <button
+                                        className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+                                        onClick={() => handleSimplify(2)}
+                                    >
+                                        Preserve
+                                    </button>
+                                </div>
+                                <ul className="space-y-2">
+                                    {simplifiedItems.map((item) => (
+                                        <li key={item.id} className={ windowWidth < thresholdWidth ? "p-4 border rounded flex flex-col" : "p-4 border rounded flex" }>
+                                            {" "}
+                                            <span className="text-blue-600">{userMap.get(item.from_user_id)}</span>
+                                            {" "}
+                                            <span className="ml-2 mr-2">
+                                                <span className="text-gray-500">pays</span>
+                                                {" "}
+                                                <span className="font-bold">{convertIntToStr(item.amount)}</span>
+                                                {" "}
+                                                <span className="text-gray-500">to</span>
+                                            </span>
+                                            {" "}
+                                            <span className="text-orange-600">{userMap.get(item.to_user_id)}</span>
+                                            {" "}
+                                            <button className="ml-auto text-sm underline text-green-600" onClick={() => handleSettle(item)}>Settle</button>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>}
                         </div>
                     </div>
                 </div>
