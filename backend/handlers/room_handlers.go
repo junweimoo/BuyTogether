@@ -47,7 +47,7 @@ func (h *Handler) GetRoomInfo(w http.ResponseWriter, r *http.Request, ps httprou
 	}
 
 	var items []models.Item
-	if err := h.DB.Where("room_id = ?", roomID).Find(&items).Error; err != nil {
+	if err := h.DB.Where("room_id = ?", roomID).Order("created_at ASC").Find(&items).Error; err != nil {
 		http.Error(w, "Failed to retrieve items", http.StatusInternalServerError)
 		return
 	}

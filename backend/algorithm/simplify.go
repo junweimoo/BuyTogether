@@ -57,6 +57,9 @@ func (s *Simplifier) noSimplify(items []models.Item) []models.SimplifiedItem {
 func (s *Simplifier) greedyAlgorithm(items []models.Item) []models.SimplifiedItem {
 	balances := map[uuid.UUID]int{}
 	for _, item := range items {
+		if item.ToUserID == item.FromUserID {
+			continue
+		}
 		balances[item.FromUserID] -= item.Amount // debtor
 		balances[item.ToUserID] += item.Amount   // creditor
 	}
@@ -76,7 +79,7 @@ func (s *Simplifier) greedyAlgorithm(items []models.Item) []models.SimplifiedIte
 
 	roomID := items[0].RoomID
 
-	var res []models.SimplifiedItem
+	res := []models.SimplifiedItem{}
 	for creditpq.Len() > 0 && debitpq.Len() > 0 {
 		maxDebitItem := heap.Pop(&debitpq).(*UserAmountItem)
 		maxCreditItem := heap.Pop(&creditpq).(*UserAmountItem)

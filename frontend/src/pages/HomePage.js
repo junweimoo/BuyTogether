@@ -183,7 +183,7 @@ const HomePage = () => {
                             </div>
                             <div>
                                 <button
-                                    className="bg-blue-500 hover:bg-blue-700 text-white items-center font-bold py-1 px-2 rounded"
+                                    className="bg-blue-500 hover:bg-blue-700 text-sm text-white items-center font-bold py-1 px-2 rounded"
                                     onClick={() => navigator.clipboard.writeText(loggedUserId)}
                                 >
                                     {windowWidth > thresholdWidth
@@ -193,7 +193,7 @@ const HomePage = () => {
                                 </button>
                             </div>
                             <button
-                                className="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded"
+                                className="bg-red-500 hover:bg-red-700 text-sm text-white font-bold py-1 px-2 rounded"
                                 onClick={handleLogout}
                             >
                                 Logout
@@ -214,7 +214,7 @@ const HomePage = () => {
 
             {/* Login / Register Form */}
             {!loggedJWT && (
-                <div className="p-6 bg-white shadow-md rounded mt-4 mx-auto w-full max-w-md">
+                <div className="mx-4 p-6 bg-white shadow-md rounded mt-4">
                     {showRegister ? (
                         <div>
                             <h3 className="text-2xl font-bold mb-4">Register</h3>
@@ -284,7 +284,7 @@ const HomePage = () => {
             <div className="p-6">
                 {/* Create / Join Room Section */}
                 {loggedJWT && (
-                    <div className="p-6 bg-white shadow-md rounded mt-4 w-full">
+                    <div className="p-6 bg-white shadow-md rounded w-full">
                         <h3 className="text-2xl font-bold mb-4">Join / Create Room</h3>
                         <div className="mb-4">
                             <input
@@ -327,12 +327,15 @@ const HomePage = () => {
                         <h4 className="text-xl font-bold mb-4">Rooms:</h4>
                         <ul className="space-y-4">
                             {rooms.map((room) => (
-                                <li key={room.id} className="border rounded p-4 flex justify-between items-center">
+                                <li key={room.id} className="border rounded p-4 space-x-2 flex justify-between items-center">
                                     <div className="space-y-1 flex-col">
-                                        <div className="text-bold">{room.name}</div>
+                                        <div className="text-bold space-x-2">
+                                            <span className="font-bold">{room.name}</span>
+                                        </div>
                                         <div className="text-gray-500">({room.id})</div>
                                     </div>
-                                    <div className={windowWidth > thresholdWidth ? "ml-auto space-x-2" : "space-y-2 ml-auto flex flex-col"} >
+                                    <div
+                                        className={windowWidth > thresholdWidth ? "ml-auto space-x-2" : "space-y-2 ml-auto flex flex-col"}>
                                         <button
                                             className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded"
                                             onClick={() => handleJoinRoom(room.id)}
@@ -340,8 +343,7 @@ const HomePage = () => {
                                             Enter
                                         </button>
                                         <button
-                                            className="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded"
-                                            // onClick={() => handleLeaveRoom(room.id)}
+                                            className="bg-red-400 hover:bg-red-700 text-white font-bold py-1 px-2 rounded"
                                             onClick={() => {
                                                 setDialogMsg("Are you sure you want to leave?");
                                                 setDialogCloseFn(() => () => {
@@ -362,12 +364,13 @@ const HomePage = () => {
             </div>
 
             {/* Confirmation dialog */}
-            <CenteredAlert message={dialogMsg} isOpen={isDialogOpen} onClose={dialogCloseFn} onCancel={() => setDialogOpen(false)} />
+            <CenteredAlert message={dialogMsg} isOpen={isDialogOpen} onClose={dialogCloseFn}
+                           onCancel={() => setDialogOpen(false)}/>
         </div>
     );
 };
 
-const CenteredAlert = ({ message, isOpen, onClose, onCancel }) => {
+const CenteredAlert = ({message, isOpen, onClose, onCancel}) => {
     if (!isOpen) return null;
 
     return (
