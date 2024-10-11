@@ -27,6 +27,7 @@ CREATE TABLE items (
                        to_user_id UUID NOT NULL REFERENCES users(id),
                        amount INTEGER NOT NULL,
                        content TEXT NOT NULL,
+                       transaction_type TEXT NOT NULL,
                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );

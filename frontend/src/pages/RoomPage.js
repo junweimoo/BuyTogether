@@ -40,6 +40,7 @@ const RoomPage = () => {
     const tabs = ['Expense', 'Income', 'Transfer'];
     const [activeTab, setActiveTab] = useState(tabs[0]);
 
+    const [showUser, setShowUser] = useState(true);
     const [showTransactions, setShowTransactions] = useState(true);
     const [showSettlements, setShowSettlements] = useState(true);
 
@@ -164,6 +165,7 @@ const RoomPage = () => {
                     name: item.content,
                     group_id: item.group_id,
                     time: item.created_at,
+                    type: item.transaction_type,
                     items: []
                 });
             }
@@ -204,12 +206,12 @@ const RoomPage = () => {
             return;
         }
         api.post(`/rooms/${roomID}/items/groupExpense`, {
-            items: newAmounts.filter((amt) => convertStrToInt(amt) !== 0).map((amt, idx) => ({
+            items: newAmounts.map((amt, idx) => ({
                 content: newItemName,
                 from_user_id: users[idx].id,
                 to_user_id: newToUserID,
                 amount: convertStrToInt(amt)})
-            )}, { headers: { Authorization: `Bearer ${loggedJWT}` }})
+            ).filter((item) => item.amount !== 0)}, { headers: { Authorization: `Bearer ${loggedJWT}` }})
             .then((response) => {
                 setItems([...items, ...response.data.newItems]);
                 setSimplifiedItems(response.data.simplifiedItems);
@@ -232,12 +234,12 @@ const RoomPage = () => {
             return;
         }
         api.post(`/rooms/${roomID}/items/groupIncome`, {
-            items: newAmounts.filter((amt) => convertStrToInt(amt) !== 0).map((amt, idx) => ({
+            items: newAmounts.map((amt, idx) => ({
                 content: newItemName,
                 from_user_id: newFromUserID,
                 to_user_id: users[idx].id,
                 amount: convertStrToInt(amt)})
-            )}, { headers: { Authorization: `Bearer ${loggedJWT}` }})
+            ).filter((item) => item.amount !== 0)}, { headers: { Authorization: `Bearer ${loggedJWT}` }})
             .then((response) => {
                 setItems([...items, ...response.data.newItems]);
                 setSimplifiedItems(response.data.simplifiedItems);
@@ -618,8 +620,13 @@ const RoomPage = () => {
                             {/* Item List */}
                             <ul className="space-y-3">
                                 {groupedItems.map((gitem, _) => (
-                                    <li key={gitem.group_id} className="flex justify-between items-center p-4 border rounded">
-                                        <div className="space-y-2 w-full">
+                                    <li key={gitem.group_id} className={`
+                                        ${gitem.type === "TRANSFER" && "bg-green-50"} 
+                                        ${gitem.type === "INCOME" && "bg-purple-50"} 
+                                        ${gitem.type === "EXPENSE" && "bg-orange-50"} 
+                                        flex justify-between items-center p-4 border rounded
+                                    `}>
+                                        <div className={"space-y-2 w-full"}>
                                             <div className="flex items-center justify-between w-full">
                                                 <div className="flex-grow space-x-2">
                                                     <span className="font-bold">{gitem.name}</span>
@@ -672,11 +679,11 @@ const RoomPage = () => {
                         </div>
 
                         {/* Settlements Section */}
-                        <div className="bg-white shadow-md rounded p-6 mb-4">
-                            <div className="flex space-x-2" onClick={() => setShowSettlements(!showSettlements)}>
+                        <div className="bg-white shadow-md rounded p-6 mb-2">
+                            <button className="flex space-x-2" onClick={() => setShowSettlements(!showSettlements)}>
                                 <h3 className="text-xl font-semibold mb-4">Settlements</h3>
-                                <h3>{showSettlements ? '▲' : '▼'}</h3>
-                            </div>
+                                <h3 className="text-gray-400 mt-0.5 ml-3">{showSettlements ? '▲' : '▼'}</h3>
+                            </button>
                             {showSettlements && <div>
                                 <div className="space-x-4 mb-4 border p-2">
                                     <span className="text-lg">Algo:</span>

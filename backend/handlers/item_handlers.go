@@ -11,6 +11,12 @@ import (
 )
 
 const (
+	Expense  string = "EXPENSE"
+	Income   string = "INCOME"
+	Transfer string = "TRANSFER"
+)
+
+const (
 	DefaultAlgo = algorithm.Greedy
 )
 
@@ -90,6 +96,8 @@ func (h *Handler) CreateItem(w http.ResponseWriter, r *http.Request, ps httprout
 
 	item.GroupID = uuid.New()
 	item.RoomID = roomID
+	item.TransactionType = Transfer
+
 	h.DB.Create(&item)
 
 	simplifiedItems, _ := h.simplifyAndStore(roomID, DefaultAlgo)
@@ -121,6 +129,7 @@ func (h *Handler) CreateGroupExpense(w http.ResponseWriter, r *http.Request, ps 
 	for i := range req.Items {
 		req.Items[i].RoomID = roomID
 		req.Items[i].GroupID = groupID
+		req.Items[i].TransactionType = Expense
 	}
 
 	if err := h.DB.Create(&req.Items).Error; err != nil {
@@ -156,6 +165,7 @@ func (h *Handler) CreateGroupIncome(w http.ResponseWriter, r *http.Request, ps h
 	for i := range req.Items {
 		req.Items[i].RoomID = roomID
 		req.Items[i].GroupID = groupID
+		req.Items[i].TransactionType = Income
 	}
 
 	if err := h.DB.Create(&req.Items).Error; err != nil {
