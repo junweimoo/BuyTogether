@@ -37,6 +37,8 @@ const HomePage = () => {
     const [isDialogOpen, setDialogOpen] = useState(false);
     const [dialogMsg, setDialogMsg] = useState('');
     const [dialogCloseFn, setDialogCloseFn] = useState(() => {});
+
+    const INVALID_TOKEN = "INVALID_TOKEN";
     
     const navigate = useNavigate();
 
@@ -116,7 +118,7 @@ const HomePage = () => {
 
     const handleRegisterUser = () => {
         if (newUsername.trim() && newPassword.trim()) {
-            if (newPassword != newPasswordSecond) {
+            if (newPassword !== newPasswordSecond) {
                 setRegisterUserError('Your passwords did not match');
                 return;
             }
@@ -142,10 +144,10 @@ const HomePage = () => {
                     setLoggedUsername(response.data.user.name);
                     setLoggedUserId(response.data.user.id);
                     setLoggedJWT(response.data.token);
+                    setGlobalError("");
 
                     setLoginUsername("");
                     setLoginPassword("");
-                    // setLoginUserError(response.data.message);
 
                     Cookies.set('session_user', JSON.stringify({
                         userId: response.data.user.id,
@@ -175,7 +177,7 @@ const HomePage = () => {
                     {windowWidth > thresholdWidth ? "BuyTogether" : "BT"}
                 </div>
                 <div className="ml-auto flex items-center space-x-4">
-                    {loggedJWT ? (
+                    {(loggedJWT && globalError === "") ? (
                         <>
                             <div>
                                 {windowWidth > thresholdWidth && "Logged in as:"}
@@ -213,7 +215,7 @@ const HomePage = () => {
             </div>
 
             {/* Login / Register Form */}
-            {!loggedJWT && (
+            {(!loggedJWT || globalError !== "") && (
                 <div className="mx-4 p-6 bg-white shadow-md rounded mt-4">
                     {showRegister ? (
                         <div>
@@ -283,7 +285,7 @@ const HomePage = () => {
             {/* Main section */}
             <div className="p-6">
                 {/* Create / Join Room Section */}
-                {loggedJWT && (
+                {(loggedJWT && globalError === "") &&(
                     <div className="p-6 bg-white shadow-md rounded w-full">
                         <h3 className="text-2xl font-bold mb-4">Join / Create Room</h3>
                         <div className="mb-4">
@@ -322,7 +324,7 @@ const HomePage = () => {
                 )}
 
                 {/* Rooms List */}
-                {loggedJWT && (
+                {(loggedJWT && globalError === "") && (
                     <div className="p-6 bg-white shadow-md rounded mt-4 w-full">
                         <h4 className="text-xl font-bold mb-4">Rooms:</h4>
                         <ul className="space-y-4">

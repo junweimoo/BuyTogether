@@ -642,28 +642,42 @@ const RoomPage = () => {
 
                                             <ul className="w-full">
                                                 {gitem.items.map((item) => (
-                                                    <li key={item.id}
-                                                        className="flex justify-between items-center p-4 border rounded">
-                                                        <div>
-                                                        <div
-                                                                className={windowWidth > thresholdWidth ? "flex space-x-2" : "flex-col space-y-1"}>
+                                                    <li key={item.id} className="flex justify-between items-center p-4 border rounded">
+                                                        <div>{
+                                                            gitem.type === "TRANSFER" ?
+                                                            <div>
                                                                 {" "}
                                                                 <span
-                                                                    className="text-blue-500">({userMap.get(item.from_user_id)})</span>
+                                                                    className="text-blue-500">({userMap.get(item.to_user_id)})</span>
                                                                 {" "}
                                                                 <span className="flex-grow">
-                                                    <span className="text-gray-500">owes</span>
+                                                                <span className="text-gray-500">paid</span>
                                                                     {" "}
                                                                     <span
                                                                         className="font-bold">{convertIntToStr(item.amount)}</span>
                                                                     {" "}
                                                                     <span className="text-gray-500">to</span>
-                                                </span>
+                                                                </span>
+                                                                {" "}
+                                                                <span className="text-blue-500">({userMap.get(item.from_user_id)})</span>
+                                                            </div> :
+                                                            <div className={windowWidth > thresholdWidth ? "flex space-x-2" : "flex-col space-y-1"}>
                                                                 {" "}
                                                                 <span
-                                                                    className="text-blue-500">({userMap.get(item.to_user_id)})</span>
+                                                                    className="text-blue-500">({userMap.get(item.from_user_id)})</span>
+                                                                {" "}
+                                                                <span className="flex-grow">
+                                                                <span className="text-gray-500">owes</span>
+                                                                    {" "}
+                                                                    <span
+                                                                        className="font-bold">{convertIntToStr(item.amount)}</span>
+                                                                    {" "}
+                                                                    <span className="text-gray-500">to</span>
+                                                                </span>
+                                                                {" "}
+                                                                <span className="text-blue-500">({userMap.get(item.to_user_id)})</span>
                                                             </div>
-                                                        </div>
+                                                        }</div>
                                                         <button
                                                             className="hover:text-red-500 text-gray-400 font-bold py-0.5 px-2 rounded"
                                                             onClick={() => handleDeleteItem(item.id)}>
@@ -710,7 +724,7 @@ const RoomPage = () => {
                                     {simplifiedItems.map((item) => (
                                         <li key={item.id} className={ windowWidth < thresholdWidth ? "p-4 border rounded flex flex-col" : "p-4 border rounded flex" }>
                                             {" "}
-                                            <span className="text-blue-600">{userMap.get(item.from_user_id)}</span>
+                                            <span className="text-orange-600">{userMap.get(item.from_user_id)}</span>
                                             {" "}
                                             <span className="ml-2 mr-2">
                                                 <span className="text-gray-500">pays</span>
@@ -720,7 +734,7 @@ const RoomPage = () => {
                                                 <span className="text-gray-500">to</span>
                                             </span>
                                             {" "}
-                                            <span className="text-orange-600">{userMap.get(item.to_user_id)}</span>
+                                            <span className="text-purple-600">{userMap.get(item.to_user_id)}</span>
                                             {" "}
                                             <button className="ml-auto text-sm underline text-green-600" onClick={() => handleSettle(item)}>Settle</button>
                                         </li>
