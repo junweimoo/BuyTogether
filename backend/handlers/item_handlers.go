@@ -9,6 +9,7 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"gorm.io/gorm"
 	"net/http"
+	"sync"
 )
 
 const (
@@ -31,16 +32,19 @@ type CreateGroupIncomeRequest struct {
 
 func (h *Handler) ItemSSEHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	roomID := ps.ByName("roomID")
-	if _, present := h.RoomClients[roomID]; !present {
-		h.RoomClients[roomID] = make(map[chan *SSEUpdateInfo]string)
+
+	if _, ok := h.RoomClients.Load(roomID); !ok {
+		var chanUserMap sync.Map
+		h.RoomClients.Store(roomID, &chanUserMap)
 	}
-	clients := h.RoomClients[roomID]
+	clients, _ := h.RoomClients.Load(roomID)
+	clientMap := clients.(*sync.Map)
 
 	messageChan := make(chan *SSEUpdateInfo)
-	clients[messageChan] = r.Context().Value("userID").(uuid.UUID).String()
+	clientMap.Store(messageChan, r.Context().Value("userID").(uuid.UUID).String())
 
 	defer func() {
-		delete(clients, messageChan)
+		clientMap.Delete(messageChan)
 		close(messageChan)
 	}()
 
@@ -68,11 +72,16 @@ func (h *Handler) ItemSSEHandler(w http.ResponseWriter, r *http.Request, ps http
 }
 
 func (h *Handler) pushItemsToOtherClients(roomID string, userID string, info *SSEUpdateInfo) {
-	for newItemsChan, clientUserID := range h.RoomClients[roomID] {
-		if clientUserID != userID {
-			newItemsChan <- info
+	clients, _ := h.RoomClients.Load(roomID)
+	clientMap := clients.(*sync.Map)
+	clientMap.Range(func(ch, value interface{}) bool {
+		clientUID := value.(string)
+		if clientUID != userID {
+			updateChan := ch.(chan *SSEUpdateInfo)
+			updateChan <- info
 		}
-	}
+		return true
+	})
 }
 
 func (h *Handler) GetItems(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {

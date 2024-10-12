@@ -729,12 +729,12 @@ const RoomPage = () => {
                         </div>
                     )}
                 </div>
-                <button
+                {windowWidth > thresholdWidth && <button
                     className="hover:text-red-500 text-gray-400 font-bold rounded transition-colors duration-300"
                     onClick={() => handleDeleteItem(item.id)}
                 >
                     X
-                </button>
+                </button>}
             </li>
         );
     }

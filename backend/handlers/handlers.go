@@ -5,13 +5,14 @@ import (
 	"backend/middleware"
 	"backend/models"
 	"gorm.io/gorm"
+	"sync"
 )
 
 type Handler struct {
 	DB          *gorm.DB
 	Simplifier  *algorithm.Simplifier
 	Auth        *middleware.Auth
-	RoomClients map[string]map[chan *SSEUpdateInfo]string
+	RoomClients *sync.Map
 }
 
 type SSEUpdateInfo struct {

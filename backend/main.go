@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sync"
 
 	"github.com/julienschmidt/httprouter"
 	"gorm.io/driver/postgres"
@@ -45,9 +46,9 @@ func main() {
 	simplifier := algorithm.Simplifier{}
 	auth := middleware.Auth{JWTKey: []byte(jwtkey)}
 
-	var roomClients = make(map[string]map[chan *handlers.SSEUpdateInfo]string)
+	var roomClients sync.Map
 
-	h := handlers.Handler{DB: db, Simplifier: &simplifier, Auth: &auth, RoomClients: roomClients}
+	h := handlers.Handler{DB: db, Simplifier: &simplifier, Auth: &auth, RoomClients: &roomClients}
 
 	router := httprouter.New()
 
