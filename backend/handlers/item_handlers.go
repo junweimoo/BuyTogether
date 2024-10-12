@@ -32,7 +32,7 @@ func (h *Handler) GetItems(w http.ResponseWriter, r *http.Request, ps httprouter
 	roomID := ps.ByName("roomID")
 	var items []models.Item
 	if err := h.DB.Where("room_id = ?", roomID).Order("created_at ASC").Find(&items).Error; err != nil {
-		http.Error(w, "Failed to retrieve items", http.StatusInternalServerError)
+		http.Error(w, "DB_ERROR_ROOM_ITEMS", http.StatusInternalServerError)
 		return
 	}
 
@@ -43,7 +43,7 @@ func (h *Handler) GetItems(w http.ResponseWriter, r *http.Request, ps httprouter
 func (h *Handler) DeleteItem(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	itemID := ps.ByName("itemID")
 	if err := h.DB.Delete(&models.Item{}, "id = ?", itemID).Error; err != nil {
-		http.Error(w, "Item not found", http.StatusNotFound)
+		http.Error(w, "ITEM_NOT_FOUND", http.StatusNotFound)
 		return
 	}
 
@@ -84,13 +84,13 @@ func (h *Handler) DeleteGroupedItems(w http.ResponseWriter, r *http.Request, ps 
 func (h *Handler) CreateItem(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	roomID, err := uuid.Parse(ps.ByName("roomID"))
 	if err != nil {
-		http.Error(w, "Invalid Room ID", http.StatusBadRequest)
+		http.Error(w, "INVALID_ROOM_ID", http.StatusBadRequest)
 		return
 	}
 
 	var item models.Item
 	if err := json.NewDecoder(r.Body).Decode(&item); err != nil {
-		http.Error(w, "Invalid input", http.StatusBadRequest)
+		http.Error(w, "INVALID_INPUT", http.StatusBadRequest)
 		return
 	}
 
@@ -98,7 +98,9 @@ func (h *Handler) CreateItem(w http.ResponseWriter, r *http.Request, ps httprout
 	item.RoomID = roomID
 	item.TransactionType = Transfer
 
-	h.DB.Create(&item)
+	if err := h.DB.Create(&item).Error; err != nil {
+		http.Error(w, "DB_ERROR_ITEMS", http.StatusInternalServerError)
+	}
 
 	simplifiedItems, _ := h.simplifyAndStore(roomID, DefaultAlgo)
 
@@ -188,7 +190,7 @@ func (h *Handler) GetSimplifiedItems(w http.ResponseWriter, r *http.Request, ps 
 
 	var simplifiedItems []models.SimplifiedItem
 	if err := h.DB.Where("room_id = ?", roomID).Find(&simplifiedItems).Error; err != nil {
-		http.Error(w, "Failed to retrieve simplified items", http.StatusInternalServerError)
+		http.Error(w, "DB_ERROR_SIMPLIFIED_ITEMS", http.StatusInternalServerError)
 		return
 	}
 

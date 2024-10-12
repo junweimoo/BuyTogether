@@ -40,7 +40,7 @@ const RoomPage = () => {
     const tabs = ['Expense', 'Income', 'Transfer'];
     const [activeTab, setActiveTab] = useState(tabs[0]);
 
-    const [showUser, setShowUser] = useState(true);
+    const [showUsers, setShowUsers] = useState(true);
     const [showTransactions, setShowTransactions] = useState(true);
     const [showSettlements, setShowSettlements] = useState(true);
 
@@ -166,11 +166,14 @@ const RoomPage = () => {
                     group_id: item.group_id,
                     time: item.created_at,
                     type: item.transaction_type,
-                    items: []
+                    items: [],
+                    amount: 0
                 });
             }
 
-            groupToItemsMap.get(item.group_id).items.push(item);
+            const group = groupToItemsMap.get(item.group_id)
+            group.items.push(item);
+            group.amount += item.amount;
         });
 
         return Array.from(groupToItemsMap.values());
@@ -198,6 +201,7 @@ const RoomPage = () => {
                 console.error('Error retrieving item:', error);
                 setNewItemError(error.response.data);
             });
+
     };
 
     const handleNewGroupExpense = () => {
@@ -350,8 +354,11 @@ const RoomPage = () => {
                     <div className="p-6">
                         {/* Users List */}
                         <div className="bg-white shadow-md rounded p-6 mb-4">
-                            <h3 className="text-xl font-semibold mb-2">Users</h3>
-                            <ul className="list-disc list-inside space-y-2">
+                            <button className="flex space-x-2" onClick={() => setShowUsers(!showUsers)}>
+                                <h3 className={`text-xl font-semibold ${showUsers && "mb-4"}`}>Users</h3>
+                                <h3 className="text-gray-400 mt-0.5 ml-3">{showUsers ? '▲' : '▼'}</h3>
+                            </button>
+                            {showUsers && <ul className="list-disc list-inside space-y-2">
                                 {users.map((user) => (
                                     <li key={user.id} className="rounded border flex p-2 space-x-2">
                                         <span className={"text-blue-500"}>{user.name}</span>
@@ -361,119 +368,39 @@ const RoomPage = () => {
                                         </span>
                                     </li>
                                 ))}
-                            </ul>
+                            </ul>}
                         </div>
 
                         {/* Items List */}
                         <div className="bg-white shadow-md rounded p-6 mb-4">
-                            <h3 className="text-xl font-semibold mb-4">Transactions</h3>
+                            <button className="flex space-x-2" onClick={() => setShowTransactions(!showTransactions)}>
+                                <h3 className={`text-xl font-semibold ${showTransactions && "mb-4"}`}>Transactions</h3>
+                                <h3 className="text-gray-400 mt-0.5 ml-3">{showTransactions ? '▲' : '▼'}</h3>
+                            </button>
 
-                            {/* New Item Menu */}
-                            <div className="mb-8 border-2 p-3 space-y-2 rounded">
+                            {showTransactions && <div>
+                                {/* New Item Menu */}
+                                <div className="mb-8 border-2 p-3 space-y-2 rounded">
 
-                                {/* Tabs Header */}
-                                <div className="flex border-b border-gray-300">
-                                    {tabs.map((tab, index) => (
-                                        <button
-                                            key={index}
-                                            className={`flex-1 py-2 px-4 text-center focus:outline-none ${
-                                                activeTab === tab
-                                                    ? 'border-b-4 border-blue-500 text-blue-600 font-semibold'
-                                                    : 'text-gray-600 hover:text-blue-500'
-                                            }`}
-                                            onClick={() => setActiveTab(tab)}
-                                        >
-                                            {tab}
-                                        </button>
-                                    ))}
-                                </div>
-
-                                {activeTab === tabs[0] ?
-                                    // Split expense
-                                    <div className="flex flex-col space-x-4 space-y-2 items-start">
-                                        <div className="flex flex-col items-center space-x-4 space-y-2 w-full">
-                                            <input
-                                                type="text"
-                                                className="border rounded p-2 flex-grow w-full"
-                                                value={newItemName}
-                                                onChange={(e) => setNewItemName(e.target.value)}
-                                                placeholder="Add a new item"
-                                            />
-                                        </div>
-                                        <div className="flex space-x-4 items-center">
-                                            <input
-                                                type="text"
-                                                className="border rounded p-2 w-24"
-                                                id="amount"
-                                                value={newAmount}
-                                                onChange={(e) => {
-                                                    if (/^\d*\.?\d{0,2}$/.test(e.target.value)) {
-                                                        setNewAmount(e.target.value)
-
-                                                        if (e.target.value !== "" && getAmount(e.target.value) === getAmountsSum(newAmounts)) {
-                                                            setAmountsMatch(true);
-                                                        } else {
-                                                            setAmountsMatch(false);
-                                                        }
-                                                    }
-                                                    ;
-                                                }}
-                                                placeholder="0.00"
-                                            />
-                                            <span>paid by</span>
-                                            <select
-                                                id="userDropdown"
-                                                className="border rounded p-2"
-                                                onChange={(e) => setNewToUserID(e.target.value)}
-                                                value={newToUserID}
+                                    {/* Tabs Header */}
+                                    <div className="flex border-b border-gray-300">
+                                        {tabs.map((tab, index) => (
+                                            <button
+                                                key={index}
+                                                className={`flex-1 py-2 px-4 text-center focus:outline-none ${
+                                                    activeTab === tab
+                                                        ? 'border-b-4 border-blue-500 text-blue-600 font-semibold'
+                                                        : 'text-gray-600 hover:text-blue-500'
+                                                }`}
+                                                onClick={() => setActiveTab(tab)}
                                             >
-                                                <option value="" disabled>By...</option>
-                                                {users.map((user) => (
-                                                    <option key={user.id} value={user.id}>
-                                                        {user.name}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                        {"" !== newToUserID && users.map((user, idx) => (
-                                            <li key={user.id}
-                                                className="flex space-x-2">
-                                                <input
-                                                    type="text"
-                                                    className="border rounded p-2 w-24 text-sm"
-                                                    id="amount"
-                                                    value={newAmounts[idx]}
-                                                    onChange={(e) => {
-                                                        if (/^\d*\.?\d{0,2}$/.test(e.target.value)) {
-                                                            const nextAmounts = [...newAmounts];
-                                                            nextAmounts[idx] = e.target.value;
-                                                            setNewAmounts(nextAmounts);
-
-                                                            if (getAmount(newAmount) === getAmountsSum(nextAmounts)) {
-                                                                setAmountsMatch(true);
-                                                            } else {
-                                                                setAmountsMatch(false);
-                                                            }
-                                                        }
-                                                    }}
-                                                    placeholder="0.00"
-                                                />
-                                                <span>spent by</span>
-                                                <span className="text-blue-500">{user.name}</span>
-                                            </li>
+                                                {tab}
+                                            </button>
                                         ))}
-                                        <button
-                                            className={`${amountsMatch && convertStrToInt(newAmount) !== 0 ? "bg-green-500 hover:bg-green-700" : "bg-gray-300"} text-white font-bold py-2 px-4 rounded m-auto`}
-                                            onClick={handleNewGroupExpense}
-                                            disabled={!(amountsMatch && convertStrToInt(newAmount) !== 0)}
-                                        >
-                                            Post
-                                        </button>
-                                        {newItemError && <div className="text-center text-red-500">{newItemError}</div>}
-                                    </div> :
-                                    activeTab === tabs[1] ?
+                                    </div>
 
-                                        // Split income
+                                    {activeTab === tabs[0] ?
+                                        // Split expense
                                         <div className="flex flex-col space-x-4 space-y-2 items-start">
                                             <div className="flex flex-col items-center space-x-4 space-y-2 w-full">
                                                 <input
@@ -500,15 +427,16 @@ const RoomPage = () => {
                                                                 setAmountsMatch(false);
                                                             }
                                                         }
+                                                        ;
                                                     }}
                                                     placeholder="0.00"
                                                 />
-                                                <span>paid to</span>
+                                                <span>paid by</span>
                                                 <select
                                                     id="userDropdown"
                                                     className="border rounded p-2"
-                                                    onChange={(e) => setNewFromUserID(e.target.value)}
-                                                    value={newFromUserID}
+                                                    onChange={(e) => setNewToUserID(e.target.value)}
+                                                    value={newToUserID}
                                                 >
                                                     <option value="" disabled>By...</option>
                                                     {users.map((user) => (
@@ -518,7 +446,7 @@ const RoomPage = () => {
                                                     ))}
                                                 </select>
                                             </div>
-                                            {"" !== newFromUserID && users.map((user, idx) => (
+                                            {"" !== newToUserID && users.map((user, idx) => (
                                                 <li key={user.id}
                                                     className="flex space-x-2">
                                                     <input
@@ -541,84 +469,167 @@ const RoomPage = () => {
                                                         }}
                                                         placeholder="0.00"
                                                     />
-                                                    <span>due to</span>
+                                                    <span>spent by</span>
                                                     <span className="text-blue-500">{user.name}</span>
                                                 </li>
                                             ))}
                                             <button
                                                 className={`${amountsMatch && convertStrToInt(newAmount) !== 0 ? "bg-green-500 hover:bg-green-700" : "bg-gray-300"} text-white font-bold py-2 px-4 rounded m-auto`}
-                                                onClick={handleNewGroupIncome}
+                                                onClick={handleNewGroupExpense}
                                                 disabled={!(amountsMatch && convertStrToInt(newAmount) !== 0)}
                                             >
                                                 Post
                                             </button>
-                                            {newItemError &&
-                                                <div className="text-center text-red-500">{newItemError}</div>}
+                                            {newItemError && <div className="text-center text-red-500">{newItemError}</div>}
                                         </div> :
+                                        activeTab === tabs[1] ?
 
-                                        // Transfer from one user to another
-                                        <div className="flex flex-col items-center space-x-4 space-y-2">
-                                            <input
-                                                type="text"
-                                                className="border rounded p-2 flex-grow w-full"
-                                                value={newItemName}
-                                                onChange={(e) => setNewItemName(e.target.value)}
-                                                placeholder="Add a new item"
-                                            />
-                                            <div className="space-x-2">
-                                                <select
-                                                    id="userDropdown"
-                                                    className="border rounded p-2"
-                                                    onChange={(e) => setNewFromUserID(e.target.value)}
-                                                    value={newFromUserID}
+                                            // Split income
+                                            <div className="flex flex-col space-x-4 space-y-2 items-start">
+                                                <div className="flex flex-col items-center space-x-4 space-y-2 w-full">
+                                                    <input
+                                                        type="text"
+                                                        className="border rounded p-2 flex-grow w-full"
+                                                        value={newItemName}
+                                                        onChange={(e) => setNewItemName(e.target.value)}
+                                                        placeholder="Add a new item"
+                                                    />
+                                                </div>
+                                                <div className="flex space-x-4 items-center">
+                                                    <input
+                                                        type="text"
+                                                        className="border rounded p-2 w-24"
+                                                        id="amount"
+                                                        value={newAmount}
+                                                        onChange={(e) => {
+                                                            if (/^\d*\.?\d{0,2}$/.test(e.target.value)) {
+                                                                setNewAmount(e.target.value)
+
+                                                                if (e.target.value !== "" && getAmount(e.target.value) === getAmountsSum(newAmounts)) {
+                                                                    setAmountsMatch(true);
+                                                                } else {
+                                                                    setAmountsMatch(false);
+                                                                }
+                                                            }
+                                                        }}
+                                                        placeholder="0.00"
+                                                    />
+                                                    <span>paid to</span>
+                                                    <select
+                                                        id="userDropdown"
+                                                        className="border rounded p-2"
+                                                        onChange={(e) => setNewFromUserID(e.target.value)}
+                                                        value={newFromUserID}
+                                                    >
+                                                        <option value="" disabled>By...</option>
+                                                        {users.map((user) => (
+                                                            <option key={user.id} value={user.id}>
+                                                                {user.name}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                                {"" !== newFromUserID && users.map((user, idx) => (
+                                                    <li key={user.id}
+                                                        className="flex space-x-2">
+                                                        <input
+                                                            type="text"
+                                                            className="border rounded p-2 w-24 text-sm"
+                                                            id="amount"
+                                                            value={newAmounts[idx]}
+                                                            onChange={(e) => {
+                                                                if (/^\d*\.?\d{0,2}$/.test(e.target.value)) {
+                                                                    const nextAmounts = [...newAmounts];
+                                                                    nextAmounts[idx] = e.target.value;
+                                                                    setNewAmounts(nextAmounts);
+
+                                                                    if (getAmount(newAmount) === getAmountsSum(nextAmounts)) {
+                                                                        setAmountsMatch(true);
+                                                                    } else {
+                                                                        setAmountsMatch(false);
+                                                                    }
+                                                                }
+                                                            }}
+                                                            placeholder="0.00"
+                                                        />
+                                                        <span>due to</span>
+                                                        <span className="text-blue-500">{user.name}</span>
+                                                    </li>
+                                                ))}
+                                                <button
+                                                    className={`${amountsMatch && convertStrToInt(newAmount) !== 0 ? "bg-green-500 hover:bg-green-700" : "bg-gray-300"} text-white font-bold py-2 px-4 rounded m-auto`}
+                                                    onClick={handleNewGroupIncome}
+                                                    disabled={!(amountsMatch && convertStrToInt(newAmount) !== 0)}
                                                 >
-                                                    <option value="" disabled>From...</option>
-                                                    {users.map((user) => (
-                                                        <option key={user.id} value={user.id}
-                                                                disabled={user.id === newToUserID}>
-                                                            {user.name}
-                                                        </option>
-                                                    ))}
-                                                </select>
+                                                    Post
+                                                </button>
+                                                {newItemError &&
+                                                    <div className="text-center text-red-500">{newItemError}</div>}
+                                            </div> :
+
+                                            // Transfer from one user to another
+                                            <div className="flex flex-col items-center space-x-4 space-y-2">
                                                 <input
                                                     type="text"
-                                                    className="border rounded p-2 w-24"
-                                                    id="amount"
-                                                    value={newAmount}
-                                                    onChange={(e) => {
-                                                        if (/^\d*\.?\d{0,2}$/.test(e.target.value)) setNewAmount(e.target.value);
-                                                    }}
-                                                    placeholder="0.00"
+                                                    className="border rounded p-2 flex-grow w-full"
+                                                    value={newItemName}
+                                                    onChange={(e) => setNewItemName(e.target.value)}
+                                                    placeholder="Add a new item"
                                                 />
-                                                <select
-                                                    id="userDropdown"
-                                                    className="border rounded p-2"
-                                                    onChange={(e) => setNewToUserID(e.target.value)}
-                                                    value={newToUserID}
+                                                <div className="space-x-2">
+                                                    <select
+                                                        id="userDropdown"
+                                                        className="border rounded p-2"
+                                                        onChange={(e) => setNewFromUserID(e.target.value)}
+                                                        value={newFromUserID}
+                                                    >
+                                                        <option value="" disabled>From...</option>
+                                                        {users.map((user) => (
+                                                            <option key={user.id} value={user.id}
+                                                                    disabled={user.id === newToUserID}>
+                                                                {user.name}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                    <input
+                                                        type="text"
+                                                        className="border rounded p-2 w-24"
+                                                        id="amount"
+                                                        value={newAmount}
+                                                        onChange={(e) => {
+                                                            if (/^\d*\.?\d{0,2}$/.test(e.target.value)) setNewAmount(e.target.value);
+                                                        }}
+                                                        placeholder="0.00"
+                                                    />
+                                                    <select
+                                                        id="userDropdown"
+                                                        className="border rounded p-2"
+                                                        onChange={(e) => setNewToUserID(e.target.value)}
+                                                        value={newToUserID}
+                                                    >
+                                                        <option value="" disabled>To...</option>
+                                                        {users.map((user) => (
+                                                            <option key={user.id} value={user.id}
+                                                                    disabled={user.id === newFromUserID}>
+                                                                {user.name}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                                <button
+                                                    className={`${(convertStrToInt(newAmount) !== 0 && newToUserID !== '' && newFromUserID !== '') ? "bg-green-500 hover:bg-green-700" : "bg-gray-300"} text-white font-bold py-2 px-4 rounded m-auto`}
+                                                    onClick={handleNewTransfer}
+                                                    disabled={!(convertStrToInt(newAmount) !== 0 && newToUserID !== '' && newFromUserID !== '')}
                                                 >
-                                                    <option value="" disabled>To...</option>
-                                                    {users.map((user) => (
-                                                        <option key={user.id} value={user.id}
-                                                                disabled={user.id === newFromUserID}>
-                                                            {user.name}
-                                                        </option>
-                                                    ))}
-                                                </select>
-                                            </div>
-                                            <button
-                                                className={`${(convertStrToInt(newAmount) !== 0 && newToUserID !== '' && newFromUserID !== '') ? "bg-green-500 hover:bg-green-700" : "bg-gray-300"} text-white font-bold py-2 px-4 rounded m-auto`}
-                                                onClick={handleNewTransfer}
-                                                disabled={!(convertStrToInt(newAmount) !== 0 && newToUserID !== '' && newFromUserID !== '')}
-                                            >
-                                                Post
-                                            </button>
-                                            {newItemError &&
-                                                <div className="text-center text-red-500">{newItemError}</div>}
-                                        </div>}
-                            </div>
+                                                    Post
+                                                </button>
+                                                {newItemError &&
+                                                    <div className="text-center text-red-500">{newItemError}</div>}
+                                            </div>}
+                                </div>
 
-                            {/* Item List */}
-                            <ul className="space-y-3">
+                                {/* Item List */}
+                                <ul className="space-y-3">
                                 {groupedItems.map((gitem, _) => (
                                     <li key={gitem.group_id} className={`
                                         ${gitem.type === "TRANSFER" && "bg-green-50"} 
@@ -630,6 +641,12 @@ const RoomPage = () => {
                                             <div className="flex items-center justify-between w-full">
                                                 <div className="flex-grow space-x-2">
                                                     <span className="font-bold">{gitem.name}</span>
+                                                    <span className={`
+                                                        ${gitem.type === "TRANSFER" && "text-green-600"}
+                                                        ${gitem.type === "INCOME" && "text-purple-600"}
+                                                        ${gitem.type === "EXPENSE" && "text-orange-600"}
+                                                        font-bold
+                                                    `}>{convertIntToStr(gitem.amount)}</span>
                                                     <span className="text-gray-500">{formatDateTime(gitem.time)}</span>
                                                 </div>
                                                 <button
@@ -642,41 +659,45 @@ const RoomPage = () => {
 
                                             <ul className="w-full">
                                                 {gitem.items.map((item) => (
-                                                    <li key={item.id} className="flex justify-between items-center p-4 border rounded">
+                                                    <li key={item.id}
+                                                        className="flex justify-between items-center p-4 border rounded">
                                                         <div>{
                                                             gitem.type === "TRANSFER" ?
-                                                            <div>
-                                                                {" "}
-                                                                <span
-                                                                    className="text-blue-500">({userMap.get(item.to_user_id)})</span>
-                                                                {" "}
-                                                                <span className="flex-grow">
+                                                                <div>
+                                                                    {" "}
+                                                                    <span
+                                                                        className="text-blue-500">({userMap.get(item.to_user_id)})</span>
+                                                                    {" "}
+                                                                    <span className="flex-grow">
                                                                 <span className="text-gray-500">paid</span>
+                                                                        {" "}
+                                                                        <span
+                                                                            className="font-bold">{convertIntToStr(item.amount)}</span>
+                                                                        {" "}
+                                                                        <span className="text-gray-500">to</span>
+                                                                </span>
                                                                     {" "}
                                                                     <span
-                                                                        className="font-bold">{convertIntToStr(item.amount)}</span>
+                                                                        className="text-blue-500">({userMap.get(item.from_user_id)})</span>
+                                                                </div> :
+                                                                <div
+                                                                    className={windowWidth > thresholdWidth ? "flex space-x-2" : "flex-col space-y-1"}>
                                                                     {" "}
-                                                                    <span className="text-gray-500">to</span>
-                                                                </span>
-                                                                {" "}
-                                                                <span className="text-blue-500">({userMap.get(item.from_user_id)})</span>
-                                                            </div> :
-                                                            <div className={windowWidth > thresholdWidth ? "flex space-x-2" : "flex-col space-y-1"}>
-                                                                {" "}
-                                                                <span
-                                                                    className="text-blue-500">({userMap.get(item.from_user_id)})</span>
-                                                                {" "}
-                                                                <span className="flex-grow">
+                                                                    <span
+                                                                        className="text-blue-500">({userMap.get(item.from_user_id)})</span>
+                                                                    {" "}
+                                                                    <span className="flex-grow">
                                                                 <span className="text-gray-500">owes</span>
+                                                                        {" "}
+                                                                        <span
+                                                                            className="font-bold">{convertIntToStr(item.amount)}</span>
+                                                                        {" "}
+                                                                        <span className="text-gray-500">to</span>
+                                                                </span>
                                                                     {" "}
                                                                     <span
-                                                                        className="font-bold">{convertIntToStr(item.amount)}</span>
-                                                                    {" "}
-                                                                    <span className="text-gray-500">to</span>
-                                                                </span>
-                                                                {" "}
-                                                                <span className="text-blue-500">({userMap.get(item.to_user_id)})</span>
-                                                            </div>
+                                                                        className="text-blue-500">({userMap.get(item.to_user_id)})</span>
+                                                                </div>
                                                         }</div>
                                                         <button
                                                             className="hover:text-red-500 text-gray-400 font-bold py-0.5 px-2 rounded"
@@ -690,12 +711,13 @@ const RoomPage = () => {
                                     </li>
                                 ))}
                             </ul>
+                            </div>}
                         </div>
 
                         {/* Settlements Section */}
                         <div className="bg-white shadow-md rounded p-6 mb-2">
                             <button className="flex space-x-2" onClick={() => setShowSettlements(!showSettlements)}>
-                                <h3 className="text-xl font-semibold mb-4">Settlements</h3>
+                                <h3 className={`text-xl font-semibold ${showSettlements && "mb-4"}`}>Settlements</h3>
                                 <h3 className="text-gray-400 mt-0.5 ml-3">{showSettlements ? '▲' : '▼'}</h3>
                             </button>
                             {showSettlements && <div>

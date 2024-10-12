@@ -106,3 +106,7 @@ func (s *Simplifier) greedyAlgorithm(items []models.Item) []models.SimplifiedIte
 
 	return res
 }
+
+func (*Simplifier) preserveEdgesAlgorithm(items []models.Item) []models.SimplifiedItem {
+	return []models.SimplifiedItem{}
+}
