@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import {useNavigate, useParams} from 'react-router-dom';
+import {redirect, useNavigate, useParams} from 'react-router-dom';
 import api from '../Api';
 import Cookies from "js-cookie";
 import NotFoundPage from "./NotFoundPage";
@@ -44,6 +44,9 @@ const RoomPage = () => {
     const [showTransactions, setShowTransactions] = useState(true);
     const [showSettlements, setShowSettlements] = useState(true);
 
+    const INVALID_TOKEN = "INVALID_TOKEN";
+    const HTTP_UNAUTHORIZED = 401;
+
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -57,7 +60,7 @@ const RoomPage = () => {
     useEffect(() => {
         const sessionUser = Cookies.get('session_user');
         if (!sessionUser) {
-            setGlobalError("Not logged in")
+            navigate('/');
             return
         }
         const parsedUser = JSON.parse(sessionUser);
@@ -75,6 +78,9 @@ const RoomPage = () => {
             })
             .catch(error => {
                 console.error('Error retrieving room:', error);
+                if (error.response.status === HTTP_UNAUTHORIZED) {
+                    navigate('/');
+                }
                 setGlobalError(error.response.data);
             })
 
@@ -747,28 +753,29 @@ const RoomPage = () => {
                                 <h3 className="text-gray-400 mt-0.5 ml-3">{showSettlements ? '▲' : '▼'}</h3>
                             </button>
                             {showSettlements && <div>
-                                <div className="space-x-4 mb-4 border p-2">
-                                    <span className="text-lg">Algo:</span>
-                                    <button
-                                        className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
-                                        onClick={() => handleSimplify(0)}
-                                    >
-                                        Reset
-                                    </button>
-                                    <button
-                                        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-                                        onClick={() => handleSimplify(1)}
-                                    >
-                                        Greedy
-                                    </button>
-                                    <button
-                                        className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
-                                        onClick={() => handleSimplify(2)}
-                                    >
-                                        Preserve
-                                    </button>
-                                </div>
+                                {/*<div className="space-x-4 mb-4 border p-2">*/}
+                                {/*    <span className="text-lg">Algo:</span>*/}
+                                {/*    <button*/}
+                                {/*        className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"*/}
+                                {/*        onClick={() => handleSimplify(0)}*/}
+                                {/*    >*/}
+                                {/*        Reset*/}
+                                {/*    </button>*/}
+                                {/*    <button*/}
+                                {/*        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"*/}
+                                {/*        onClick={() => handleSimplify(1)}*/}
+                                {/*    >*/}
+                                {/*        Greedy*/}
+                                {/*    </button>*/}
+                                {/*    <button*/}
+                                {/*        className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"*/}
+                                {/*        onClick={() => handleSimplify(2)}*/}
+                                {/*    >*/}
+                                {/*        Preserve*/}
+                                {/*    </button>*/}
+                                {/*</div>*/}
                                 <ul className="space-y-2">
+                                    {simplifiedItems.length === 0 && <div className="text-green-600">All settled up!</div>}
                                     {simplifiedItems.map((item) => (
                                         <li key={item.id} className={ windowWidth < thresholdWidth ? "p-4 border rounded flex flex-col" : "p-4 border rounded flex" }>
                                             {" "}

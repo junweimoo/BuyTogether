@@ -8,18 +8,6 @@ const HomePage = () => {
     const [newRoomName, setNewRoomName] = useState('');
     const [newRoomID, setnewRoomID] = useState('');
 
-    const [showRegister, setShowRegister] = useState(false);
-
-    const [newUsername, setNewUsername] = useState('');
-    const [newPassword, setNewPassword] = useState('');
-    const [newPasswordSecond, setNewPasswordSecond] = useState('');
-    const [registerUserError, setRegisterUserError] = useState('');
-    const [registerUserSuccess, setRegisterUserSuccess] = useState('');
-
-    const [loginUsername, setLoginUsername] = useState('');
-    const [loginPassword, setLoginPassword] = useState('');
-    const [loginUserError, setLoginUserError] = useState('');
-
     const [loggedUsername, setLoggedUsername] = useState('');
     const [loggedUserId, setLoggedUserId] = useState('');
     const [loggedJWT, setLoggedJWT] = useState('');
@@ -37,8 +25,6 @@ const HomePage = () => {
     const [isDialogOpen, setDialogOpen] = useState(false);
     const [dialogMsg, setDialogMsg] = useState('');
     const [dialogCloseFn, setDialogCloseFn] = useState(() => {});
-
-    const INVALID_TOKEN = "INVALID_TOKEN";
     
     const navigate = useNavigate();
 
@@ -47,33 +33,37 @@ const HomePage = () => {
         window.addEventListener('resize', handleResize);
         setWindowWidth(window.innerWidth);
 
-        return () => window.removeEventListener('resize', handleResize);
-    }, []);
-
-    useEffect(() => {
         const sessionUser = Cookies.get('session_user');
         if (sessionUser) {
-            const parsedUser = JSON.parse(sessionUser);
-            setLoggedUsername(parsedUser.username);
-            setLoggedUserId(parsedUser.userId);
-            setLoggedJWT(parsedUser.jwt);
-        }
-    }, []);
+            try {
+                const parsedUser = JSON.parse(sessionUser);
+                setLoggedUsername(parsedUser.username);
+                setLoggedUserId(parsedUser.userId);
+                setLoggedJWT(parsedUser.jwt);
 
-    useEffect(() => {
-        if (loggedJWT === '' || loggedUserId === '') {
-            setRooms([])
-            return
+                if (!parsedUser.jwt) {
+                    navigate('/login');
+                }
+
+                api.get(`/users/${parsedUser.userId}`, { headers: { Authorization: `Bearer ${parsedUser.jwt}` }})
+                    .then((response) => {
+                        const userRooms = response.data.rooms;
+                        setRooms(userRooms);
+                    }).catch(error => {
+                        setGlobalError(error.response.data);
+                        console.error('Error retrieving user info:', error);
+                        navigate("/login");
+                    }
+                );
+            } catch (e) {
+                navigate("/login");
+            }
+        } else {
+            navigate("/login");
         }
-        api.get(`/users/${loggedUserId}`, { headers: { Authorization: `Bearer ${loggedJWT}` }})
-            .then((response) => {
-                const userRooms = response.data.rooms;
-                setRooms(userRooms);
-            }).catch(error => {
-                setGlobalError(error.response.data);
-                console.error('Error retrieving user info:', error);
-        });
-    }, [loggedJWT])
+
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     const handleCreateRoom = () => {
         api.post('/rooms',
@@ -116,57 +106,12 @@ const HomePage = () => {
             });
     }
 
-    const handleRegisterUser = () => {
-        if (newUsername.trim() && newPassword.trim()) {
-            if (newPassword !== newPasswordSecond) {
-                setRegisterUserError('Your passwords did not match');
-                return;
-            }
-            api.post('/users/register', { name: newUsername, password_hash: newPassword })
-                .then(response => {
-                    setNewUsername("");
-                    setNewPassword("");
-                    setNewPasswordSecond("");
-                    setRegisterUserSuccess(true);
-                    setRegisterUserError('');
-                })
-                .catch(error => {
-                    console.error('Error while registering:', error);
-                    setRegisterUserError(error.response.data);
-                })
-        }
-    }
-
-    const handleLoginUser = () => {
-        if (loginUsername.trim() && loginPassword.trim()) {
-            api.post('/users/login', { name: loginUsername, password_hash: loginPassword })
-                .then(response => {
-                    setLoggedUsername(response.data.user.name);
-                    setLoggedUserId(response.data.user.id);
-                    setLoggedJWT(response.data.token);
-                    setGlobalError("");
-
-                    setLoginUsername("");
-                    setLoginPassword("");
-
-                    Cookies.set('session_user', JSON.stringify({
-                        userId: response.data.user.id,
-                        username: response.data.user.name,
-                        jwt: response.data.token
-                    }), { expires: 1 });
-                })
-                .catch(error => {
-                    console.error('Error while logging in:', error);
-                    setLoginUserError(error.response.data);
-                })
-        }
-    }
-
     const handleLogout = () => {
         Cookies.remove('session_user');
         setLoggedUserId('');
         setLoggedUsername('');
         setLoggedJWT('');
+        navigate("/login");
     }
 
     return (
@@ -177,110 +122,29 @@ const HomePage = () => {
                     {windowWidth > thresholdWidth ? "BuyTogether" : "BT"}
                 </div>
                 <div className="ml-auto flex items-center space-x-4">
-                    {(loggedJWT && globalError === "") ? (
-                        <>
-                            <div>
-                                {windowWidth > thresholdWidth && "Logged in as:"}
-                                <span className="ml-1 font-bold">{loggedUsername}</span>
-                            </div>
-                            <div>
-                                <button
-                                    className="bg-blue-500 hover:bg-blue-700 text-sm text-white items-center font-bold py-1 px-2 rounded"
-                                    onClick={() => navigator.clipboard.writeText(loggedUserId)}
-                                >
-                                    {windowWidth > thresholdWidth
-                                        ? "Copy ID"
-                                        : "Copy ID"
-                                    }
-                                </button>
-                            </div>
-                            <button
-                                className="bg-red-500 hover:bg-red-700 text-sm text-white font-bold py-1 px-2 rounded"
-                                onClick={handleLogout}
-                            >
-                                Logout
-                            </button>
-                        </>
-                    ) : (
-                        <>
-                            <button
-                                className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded"
-                                onClick={() => setShowRegister(!showRegister)}
-                            >
-                                {showRegister ? "Login" : "Register"}
-                            </button>
-                        </>
-                    )}
+                    <div>
+                        {windowWidth > thresholdWidth && "Logged in as:"}
+                        <span className="ml-1 font-bold">{loggedUsername}</span>
+                    </div>
+                    <div>
+                        <button
+                            className="bg-blue-500 hover:bg-blue-700 text-sm text-white items-center font-bold py-1 px-2 rounded"
+                            onClick={() => navigator.clipboard.writeText(loggedUserId)}
+                        >
+                            {windowWidth > thresholdWidth
+                                ? "Copy ID"
+                                : "Copy ID"
+                            }
+                        </button>
+                    </div>
+                    <button
+                        className="bg-red-500 hover:bg-red-700 text-sm text-white font-bold py-1 px-2 rounded"
+                        onClick={handleLogout}
+                    >
+                        Logout
+                    </button>
                 </div>
             </div>
-
-            {/* Login / Register Form */}
-            {(!loggedJWT || globalError !== "") && (
-                <div className="mx-4 p-6 bg-white shadow-md rounded mt-4">
-                    {showRegister ? (
-                        <div>
-                            <h3 className="text-2xl font-bold mb-4">Register</h3>
-                            <input
-                                type="text"
-                                className="border rounded w-full p-2 mb-4"
-                                value={newUsername}
-                                onChange={(e) => setNewUsername(e.target.value)}
-                                placeholder="Enter Username"
-                            />
-                            <input
-                                type="password"
-                                className="border rounded w-full p-2 mb-4"
-                                value={newPassword}
-                                onChange={(e) => setNewPassword(e.target.value)}
-                                placeholder="Enter Password"
-                            />
-                            <input
-                                type="password"
-                                className="border rounded w-full p-2 mb-4"
-                                value={newPasswordSecond}
-                                onChange={(e) => setNewPasswordSecond(e.target.value)}
-                                placeholder="Confirm Password"
-                            />
-                            <button
-                                className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded w-full"
-                                onClick={handleRegisterUser}
-                            >
-                                Register
-                            </button>
-                            {registerUserError && <div className="text-red-500 mt-2">{registerUserError}</div>}
-                            {registerUserSuccess && <div
-                                className="text-green-600 mt-2">Account created! You may now <span
-                                className="text-blue-500" onClick={() => setShowRegister(false)}>login</span>.
-                            </div>}
-                        </div>
-                    ) : (
-                        <div>
-                            <h3 className="text-2xl font-bold mb-4">Login</h3>
-                            <input
-                                type="text"
-                                className="border rounded w-full p-2 mb-4"
-                                value={loginUsername}
-                                onChange={(e) => setLoginUsername(e.target.value)}
-                                placeholder="Enter Username"
-                            />
-                            <input
-                                type="password"
-                                className="border rounded w-full p-2 mb-4"
-                                value={loginPassword}
-                                onChange={(e) => setLoginPassword(e.target.value)}
-                                placeholder="Enter Password"
-                            />
-                            <button
-                                className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded w-full"
-                                onClick={handleLoginUser}
-                            >
-                                Login
-                            </button>
-                            {loginUserError && <div className="text-red-500 mt-2">{loginUserError}</div>}
-                        </div>
-                    )}
-                </div>
-            )}
 
             {/* Main section */}
             <div className="p-6">
