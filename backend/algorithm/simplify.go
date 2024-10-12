@@ -41,7 +41,7 @@ func (s *Simplifier) SimplifyItems(items []models.Item, algoChoice AlgoType) []m
 }
 
 func (s *Simplifier) noSimplify(items []models.Item) []models.SimplifiedItem {
-	var res []models.SimplifiedItem
+	res := []models.SimplifiedItem{}
 	for _, item := range items {
 		simplifiedItem := models.SimplifiedItem{
 			RoomID:     item.RoomID,
@@ -55,6 +55,10 @@ func (s *Simplifier) noSimplify(items []models.Item) []models.SimplifiedItem {
 }
 
 func (s *Simplifier) greedyAlgorithm(items []models.Item) []models.SimplifiedItem {
+	if len(items) == 0 {
+		return []models.SimplifiedItem{}
+	}
+
 	balances := map[uuid.UUID]int{}
 	for _, item := range items {
 		if item.ToUserID == item.FromUserID {

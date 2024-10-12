@@ -45,7 +45,9 @@ func main() {
 	simplifier := algorithm.Simplifier{}
 	auth := middleware.Auth{JWTKey: []byte(jwtkey)}
 
-	h := handlers.Handler{DB: db, Simplifier: &simplifier, Auth: &auth}
+	var roomClients = make(map[string]map[chan *handlers.SSEUpdateInfo]string)
+
+	h := handlers.Handler{DB: db, Simplifier: &simplifier, Auth: &auth, RoomClients: roomClients}
 
 	router := httprouter.New()
 
@@ -61,10 +63,11 @@ func main() {
 	router.DELETE("/rooms/:roomID/items/:itemID", auth.JWTAuth(h.DeleteItem))
 	router.GET("/rooms/:roomID/simplified_items", auth.JWTAuth(h.GetSimplifiedItems))
 	router.POST("/rooms/:roomID/simplify", auth.JWTAuth(h.SimplifyItems))
-	router.POST("/rooms/:roomID/items", auth.JWTAuth(h.CreateItem))
+	router.POST("/rooms/:roomID/items", auth.JWTAuth(h.CreateTransfer))
 	router.POST("/rooms/:roomID/items/groupExpense", auth.JWTAuth(h.CreateGroupExpense))
 	router.POST("/rooms/:roomID/items/groupIncome", auth.JWTAuth(h.CreateGroupIncome))
 	router.DELETE("/rooms/:roomID/groups/:groupID", auth.JWTAuth(h.DeleteGroupedItems))
+	router.GET("/rooms/:roomID/sse", auth.JWTAuth(h.ItemSSEHandler))
 
 	// Users
 	router.POST("/users/register", h.CreateUser)

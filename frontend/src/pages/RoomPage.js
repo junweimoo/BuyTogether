@@ -77,7 +77,33 @@ const RoomPage = () => {
                 console.error('Error retrieving room:', error);
                 setGlobalError(error.response.data);
             })
+
+        const eventSource = new EventSource(`${api.defaults.baseURL}/rooms/${roomID}/sse?token=${encodeURIComponent(parsedUser.jwt)}`);
+        eventSource.onmessage = (event) => {
+            console.log(event.data)
+            const parsedItems = JSON.parse(event.data);
+            setItems((prevItems) => {
+                var deletedItems = parsedItems.deleted_items;
+                if (deletedItems) {
+                    var deletedItemIds = deletedItems.map(item => item.id);
+                    prevItems = prevItems.filter((item) => !deletedItemIds.includes(item.id));
+                }
+
+                var newItems = parsedItems.new_items;
+                if (newItems) {
+                    prevItems =  [...prevItems, ...newItems]
+                }
+
+                return prevItems
+            });
+            setSimplifiedItems(parsedItems.simplified_items);
+        };
+
+        return () => {
+            eventSource.close();
+        };
     }, [roomID]);
+
 
     useEffect(() => {
         const newUserMap = new Map();
@@ -319,7 +345,7 @@ const RoomPage = () => {
 
     return (
         globalError !== '' ? NotFoundPage(globalError) :
-            roomName === '' ? LoadingPage() :
+            // roomName === '' ? LoadingPage() :
                 <div className="min-h-screen bg-gray-100" style={{ minWidth: `${minWidth}px`}}>
                     {/* Top Bar */}
                     <div className="bg-blue-600 text-white flex justify-between items-center px-4 py-4">

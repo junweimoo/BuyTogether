@@ -4,6 +4,7 @@ import (
 	"backend/algorithm"
 	"backend/models"
 	"encoding/json"
+	"fmt"
 	"github.com/google/uuid"
 	"github.com/julienschmidt/httprouter"
 	"gorm.io/gorm"
@@ -28,6 +29,52 @@ type CreateGroupIncomeRequest struct {
 	Items []models.Item `json:"items"`
 }
 
+func (h *Handler) ItemSSEHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	roomID := ps.ByName("roomID")
+	if _, present := h.RoomClients[roomID]; !present {
+		h.RoomClients[roomID] = make(map[chan *SSEUpdateInfo]string)
+	}
+	clients := h.RoomClients[roomID]
+
+	messageChan := make(chan *SSEUpdateInfo)
+	clients[messageChan] = r.Context().Value("userID").(uuid.UUID).String()
+
+	defer func() {
+		delete(clients, messageChan)
+		close(messageChan)
+	}()
+
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+
+	for {
+		select {
+		case info := <-messageChan:
+			serializedData, err := json.Marshal(info)
+			if err != nil {
+				http.Error(w, "ERR_JSON_SERIALIZE", http.StatusInternalServerError)
+				return
+			}
+			fmt.Fprintf(w, "data: %s\n\n", serializedData)
+			flusher, ok := w.(http.Flusher)
+			if ok {
+				flusher.Flush()
+			}
+		case <-r.Context().Done():
+			return
+		}
+	}
+}
+
+func (h *Handler) pushItemsToOtherClients(roomID string, userID string, info *SSEUpdateInfo) {
+	for newItemsChan, clientUserID := range h.RoomClients[roomID] {
+		if clientUserID != userID {
+			newItemsChan <- info
+		}
+	}
+}
+
 func (h *Handler) GetItems(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	roomID := ps.ByName("roomID")
 	var items []models.Item
@@ -42,13 +89,31 @@ func (h *Handler) GetItems(w http.ResponseWriter, r *http.Request, ps httprouter
 
 func (h *Handler) DeleteItem(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	itemID := ps.ByName("itemID")
+
+	var deletedItem models.Item
+	if err := h.DB.Where("id = ?", itemID).First(&deletedItem).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			http.Error(w, "ITEM_NOT_FOUND", http.StatusNotFound)
+		} else {
+			http.Error(w, "DB_ERROR_ITEMS", http.StatusInternalServerError)
+		}
+		return
+	}
+
 	if err := h.DB.Delete(&models.Item{}, "id = ?", itemID).Error; err != nil {
-		http.Error(w, "ITEM_NOT_FOUND", http.StatusNotFound)
+		http.Error(w, "DB_ERROR_ITEMS", http.StatusNotFound)
 		return
 	}
 
 	roomID, _ := uuid.Parse(ps.ByName("roomID"))
 	simplifiedItems, _ := h.simplifyAndStore(roomID, DefaultAlgo)
+
+	userIDStr := r.Context().Value("userID").(uuid.UUID).String()
+	info := &SSEUpdateInfo{
+		DeletedItems:    []models.Item{deletedItem},
+		SimplifiedItems: simplifiedItems,
+	}
+	h.pushItemsToOtherClients(ps.ByName("roomID"), userIDStr, info)
 
 	response := map[string]interface{}{
 		"simplifiedItems": simplifiedItems,
@@ -60,18 +125,31 @@ func (h *Handler) DeleteItem(w http.ResponseWriter, r *http.Request, ps httprout
 
 func (h *Handler) DeleteGroupedItems(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	groupID := ps.ByName("groupID")
-	if err := h.DB.Delete(&models.Item{}, "group_id = ?", groupID).Error; err != nil {
+
+	var deletedItems []models.Item
+	if err := h.DB.Where("group_id = ?", groupID).Find(&deletedItems).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			http.Error(w, "GROUPID_NOT_FOUND", http.StatusNotFound)
-			return
 		} else {
 			http.Error(w, "DB_ERROR_ITEMS", http.StatusInternalServerError)
 		}
 		return
 	}
 
+	if err := h.DB.Delete(&models.Item{}, "group_id = ?", groupID).Error; err != nil {
+		http.Error(w, "DB_ERROR_ITEMS", http.StatusInternalServerError)
+		return
+	}
+
 	roomID, _ := uuid.Parse(ps.ByName("roomID"))
 	simplifiedItems, _ := h.simplifyAndStore(roomID, DefaultAlgo)
+
+	userIDStr := r.Context().Value("userID").(uuid.UUID).String()
+	info := &SSEUpdateInfo{
+		DeletedItems:    deletedItems,
+		SimplifiedItems: simplifiedItems,
+	}
+	h.pushItemsToOtherClients(ps.ByName("roomID"), userIDStr, info)
 
 	response := map[string]interface{}{
 		"simplifiedItems": simplifiedItems,
@@ -81,7 +159,7 @@ func (h *Handler) DeleteGroupedItems(w http.ResponseWriter, r *http.Request, ps 
 	json.NewEncoder(w).Encode(response)
 }
 
-func (h *Handler) CreateItem(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func (h *Handler) CreateTransfer(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	roomID, err := uuid.Parse(ps.ByName("roomID"))
 	if err != nil {
 		http.Error(w, "INVALID_ROOM_ID", http.StatusBadRequest)
@@ -103,6 +181,13 @@ func (h *Handler) CreateItem(w http.ResponseWriter, r *http.Request, ps httprout
 	}
 
 	simplifiedItems, _ := h.simplifyAndStore(roomID, DefaultAlgo)
+
+	userIDStr := r.Context().Value("userID").(uuid.UUID).String()
+	info := &SSEUpdateInfo{
+		NewItems:        []models.Item{item},
+		SimplifiedItems: simplifiedItems,
+	}
+	h.pushItemsToOtherClients(ps.ByName("roomID"), userIDStr, info)
 
 	response := map[string]interface{}{
 		"newItem":         item,
@@ -140,6 +225,13 @@ func (h *Handler) CreateGroupExpense(w http.ResponseWriter, r *http.Request, ps 
 
 	simplifiedItems, _ := h.simplifyAndStore(roomID, DefaultAlgo)
 
+	userIDStr := r.Context().Value("userID").(uuid.UUID).String()
+	info := &SSEUpdateInfo{
+		NewItems:        req.Items,
+		SimplifiedItems: simplifiedItems,
+	}
+	h.pushItemsToOtherClients(ps.ByName("roomID"), userIDStr, info)
+
 	response := map[string]interface{}{
 		"newItems":        req.Items,
 		"simplifiedItems": simplifiedItems,
@@ -175,6 +267,13 @@ func (h *Handler) CreateGroupIncome(w http.ResponseWriter, r *http.Request, ps h
 	}
 
 	simplifiedItems, _ := h.simplifyAndStore(roomID, DefaultAlgo)
+
+	userIDStr := r.Context().Value("userID").(uuid.UUID).String()
+	info := &SSEUpdateInfo{
+		NewItems:        req.Items,
+		SimplifiedItems: simplifiedItems,
+	}
+	h.pushItemsToOtherClients(ps.ByName("roomID"), userIDStr, info)
 
 	response := map[string]interface{}{
 		"newItems":        req.Items,
@@ -222,10 +321,6 @@ func (h *Handler) simplifyAndStore(roomID uuid.UUID, algoType algorithm.AlgoType
 	var items []models.Item
 	if err := h.DB.Where("room_id = ?", roomID).Find(&items).Error; err != nil {
 		return nil, err
-	}
-
-	if len(items) == 0 {
-		return []models.SimplifiedItem{}, nil
 	}
 
 	simplifiedItems := h.Simplifier.SimplifyItems(items, algoType)
