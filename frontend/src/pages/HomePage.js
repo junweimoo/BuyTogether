@@ -55,7 +55,7 @@ const HomePage = () => {
 
     const [windowWidth, setWindowWidth] = useState(window.innerWidth);
     const thresholdWidth = 650;
-    const minWidth = 400;
+    const minWidth = 340;
 
     const [isDialogOpen, setDialogOpen] = useState(false);
     const [dialogMsg, setDialogMsg] = useState('');
@@ -213,7 +213,7 @@ const HomePage = () => {
             </div>
 
             {/* Main section */}
-            <div className="p-6">
+            <div className="p-3">
                 {/* Create / Join Room Section */}
                 {(loggedJWT && globalError === "") &&(
                     <div className="p-6 bg-white shadow-md rounded w-full">
@@ -255,7 +255,7 @@ const HomePage = () => {
 
                 {/* Rooms List */}
                 {(loggedJWT && globalError === "") && (
-                    <div className="p-6 bg-white shadow-md rounded mt-4 w-full">
+                    <div className="p-3 bg-white shadow-md rounded mt-4 w-full">
                         <h4 className="text-xl font-bold mb-4">Rooms:</h4>
                         <ul className="space-y-4">
                             {rooms.map((room) => getRoomTile(room))}

@@ -17,7 +17,7 @@ const LoginPage = () => {
 
     const [windowWidth, setWindowWidth] = useState(window.innerWidth);
     const thresholdWidth = 650;
-    const minWidth = 400;
+    const minWidth = 340;
 
     const navigate = useNavigate();
 

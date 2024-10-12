@@ -37,7 +37,7 @@ const RoomPage = () => {
 
     const [windowWidth, setWindowWidth] = useState(window.innerWidth);
     const thresholdWidth = 768;
-    const minWidth = 400;
+    const minWidth = 340;
 
     const tabs = ['Expense', 'Income', 'Transfer'];
     const [activeTab, setActiveTab] = useState(tabs[0]);
@@ -139,7 +139,7 @@ const RoomPage = () => {
         const options = { day: '2-digit', month: 'short' };
         const datePart = dateObj.toLocaleDateString('en-GB', options);
 
-        return `${hours}:${minutes}, ${datePart}`;
+        return `${datePart} ${hours}:${minutes}`;
     }
 
     const convertIntToStr = (amountInt) => {
@@ -753,18 +753,20 @@ const RoomPage = () => {
             >
                 <div className="space-y-2 w-full text-sm">
                     <div className="flex items-center justify-between w-full">
-                        <div className="flex items-center space-x-2 flex-grow">
-                            <span className="font-bold max-w-40 truncate">{gitem.name}</span>
-                            <span className={`
-                                ${gitem.type === "TRANSFER" && "text-green-600"}
-                                ${gitem.type === "INCOME" && "text-purple-600"}
-                                ${gitem.type === "EXPENSE" && "text-orange-600"}
-                                font-bold
-                            `}>
-                                {convertIntToStr(gitem.amount)}
-                            </span>
+                        <div className="flex-col">
+                            <div className="flex items-center space-x-2 flex-grow">
+                                <span className="font-bold max-w-56 truncate">{gitem.name}</span>
+                                <span className={`
+                                    ${gitem.type === "TRANSFER" && "text-green-600"}
+                                    ${gitem.type === "INCOME" && "text-purple-600"}
+                                    ${gitem.type === "EXPENSE" && "text-orange-600"}
+                                    font-bold
+                                `}>
+                                    {convertIntToStr(gitem.amount)}
+                                </span>
+                            </div>
+                            <span className="text-gray-500 w-32 text-right">{formatDateTime(gitem.time)}</span>
                         </div>
-                        <span className="text-gray-500 w-32 text-right">{formatDateTime(gitem.time)}</span>
                         <button
                             className="hover:text-red-500 text-gray-700 font-bold px-2 rounded transition-colors duration-300"
                             onClick={() => handleDeleteGroup(gitem.group_id)}
