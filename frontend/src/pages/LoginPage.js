@@ -74,12 +74,12 @@ const LoginPage = () => {
 
     return (
         <div style={{ minWidth: `${minWidth}px` }}>
-            <div className="bg-blue-600 text-white flex justify-between items-center px-6 py-4">
+            <div className="bg-blue-600 text-white flex justify-between items-center px-6 py-3 h-12">
                 <div className="text-xl font-semibold">
                     {windowWidth > thresholdWidth ? "BuyTogether" : "BT"}
                 </div>
                 <button
-                    className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded"
+                    className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-3 text-sm rounded"
                     onClick={() => setShowRegister(!showRegister)}
                 >
                     {showRegister ? "Login" : "Register"}

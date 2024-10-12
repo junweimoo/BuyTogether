@@ -3,6 +3,41 @@ import Cookies from 'js-cookie';
 import { useNavigate } from 'react-router-dom';
 import { FaRegClipboard } from 'react-icons/fa';
 import api from '../Api';
+import * as PropTypes from "prop-types";
+
+function CenteredAlert(props) {
+    if (!props.isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white p-6 rounded-lg shadow-lg w-2/3 max-w-md text-center">
+                <h2 className="text-xl font-semibold mb-4">Alert</h2>
+                <p className="mb-6">{props.message}</p>
+                <div className="items-center space-x-4">
+                    <button
+                        onClick={props.onCancel}
+                        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onClick={props.onClose}
+                        className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+                    >
+                        Confirm
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+CenteredAlert.propTypes = {
+    message: PropTypes.string,
+    isOpen: PropTypes.bool,
+    onClose: PropTypes.func,
+    onClose1: PropTypes.func,
+}
 
 const HomePage = () => {
     const [newRoomName, setNewRoomName] = useState('');
@@ -114,29 +149,60 @@ const HomePage = () => {
         navigate("/login");
     }
 
+    function getRoomTile(room) {
+        return <li
+            className="border border-gray-300 rounded p-4 flex justify-between items-center shadow-md hover:shadow-lg transition-shadow duration-300">
+            <div className="space-y-1 flex-col">
+                <div className="text-bold space-x-2">
+                    <span className="font-bold">{room.name}</span>
+                </div>
+                <div className="text-gray-500 text-sm">({room.id})</div>
+            </div>
+            <div className={windowWidth > thresholdWidth ? "ml-auto space-x-3" : "space-y-3 ml-auto flex flex-col"}>
+                <button
+                    className="text-sm bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded transition-colors duration-300"
+                    onClick={() => handleJoinRoom(room.id)}
+                >
+                    Enter
+                </button>
+                <button
+                    className="text-sm bg-red-400 hover:bg-red-700 text-white font-bold py-1 px-3 rounded transition-colors duration-300"
+                    onClick={() => {
+                        setDialogMsg("Are you sure you want to leave?");
+                        setDialogCloseFn(() => () => {
+                            setDialogOpen(false);
+                            handleLeaveRoom(room.id);
+                        });
+                        setDialogOpen(true);
+                    }}
+                >
+                    Leave
+                </button>
+            </div>
+        </li>
+            ;
+    }
+
     return (
-        <div className="min-h-screen bg-gray-100" style={{ minWidth: `${minWidth}px` }}>
+        <div className="min-h-screen bg-gray-100" style={{minWidth: `${minWidth}px`}}>
             {/* Top Bar */}
-            <div className="bg-blue-600 text-white flex justify-between items-center px-6 py-4">
+            <div className="bg-blue-600 text-white flex justify-between items-center px-6 h-12">
                 <div className="text-xl font-semibold">
                     {windowWidth > thresholdWidth ? "BuyTogether" : "BT"}
                 </div>
-                <div className="ml-auto flex items-center space-x-4">
+                <div className="ml-auto flex items-center space-x-3">
                     <div>
                         {windowWidth > thresholdWidth && "Logged in as:"}
                         <span className="ml-1 font-bold">{loggedUsername}</span>
                     </div>
-                    <div>
-                        <button
-                            className="bg-blue-500 hover:bg-blue-700 text-sm text-white items-center font-bold py-1 px-2 rounded"
-                            onClick={() => navigator.clipboard.writeText(loggedUserId)}
-                        >
-                            {windowWidth > thresholdWidth
-                                ? "Copy ID"
-                                : "Copy ID"
-                            }
-                        </button>
-                    </div>
+                    {/*<div>*/}
+                    {/*    <button*/}
+                    {/*        className="bg-blue-500 hover:bg-blue-700 text-sm text-white items-center py-0 px-2 rounded"*/}
+                    {/*        onClick={() => navigator.clipboard.writeText(loggedUserId)}*/}
+                    {/*    >*/}
+                    {/*        Copy ID*/}
+                    {/*    </button>*/}
+                    {/*</div>*/}
                     <button
                         className="bg-red-500 hover:bg-red-700 text-sm text-white font-bold py-1 px-2 rounded"
                         onClick={handleLogout}
@@ -192,38 +258,7 @@ const HomePage = () => {
                     <div className="p-6 bg-white shadow-md rounded mt-4 w-full">
                         <h4 className="text-xl font-bold mb-4">Rooms:</h4>
                         <ul className="space-y-4">
-                            {rooms.map((room) => (
-                                <li key={room.id} className="border rounded p-4 space-x-2 flex justify-between items-center">
-                                    <div className="space-y-1 flex-col">
-                                        <div className="text-bold space-x-2">
-                                            <span className="font-bold">{room.name}</span>
-                                        </div>
-                                        <div className="text-gray-500">({room.id})</div>
-                                    </div>
-                                    <div
-                                        className={windowWidth > thresholdWidth ? "ml-auto space-x-2" : "space-y-2 ml-auto flex flex-col"}>
-                                        <button
-                                            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded"
-                                            onClick={() => handleJoinRoom(room.id)}
-                                        >
-                                            Enter
-                                        </button>
-                                        <button
-                                            className="bg-red-400 hover:bg-red-700 text-white font-bold py-1 px-2 rounded"
-                                            onClick={() => {
-                                                setDialogMsg("Are you sure you want to leave?");
-                                                setDialogCloseFn(() => () => {
-                                                    setDialogOpen(false);
-                                                    handleLeaveRoom(room.id);
-                                                });
-                                                setDialogOpen(true);
-                                            }}
-                                        >
-                                            Leave
-                                        </button>
-                                    </div>
-                                </li>
-                            ))}
+                            {rooms.map((room) => getRoomTile(room))}
                         </ul>
                     </div>
                 )}
@@ -232,33 +267,6 @@ const HomePage = () => {
             {/* Confirmation dialog */}
             <CenteredAlert message={dialogMsg} isOpen={isDialogOpen} onClose={dialogCloseFn}
                            onCancel={() => setDialogOpen(false)}/>
-        </div>
-    );
-};
-
-const CenteredAlert = ({message, isOpen, onClose, onCancel}) => {
-    if (!isOpen) return null;
-
-    return (
-        <div className="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white p-6 rounded-lg shadow-lg w-2/3 max-w-md text-center">
-                <h2 className="text-xl font-semibold mb-4">Alert</h2>
-                <p className="mb-6">{message}</p>
-                <div className="items-center space-x-4">
-                    <button
-                        onClick={onCancel}
-                        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-                    >
-                        Cancel
-                    </button>
-                    <button
-                        onClick={onClose}
-                        className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
-                    >
-                        Confirm
-                    </button>
-                </div>
-            </div>
         </div>
     );
 };

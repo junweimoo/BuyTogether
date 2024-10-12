@@ -5,6 +5,8 @@ import Cookies from "js-cookie";
 import NotFoundPage from "./NotFoundPage";
 import LoadingPage from "./LoadingPage";
 import { BsCaretLeftFill } from "react-icons/bs";
+import { PiArrowDown, PiArrowsSplit } from "react-icons/pi";
+import { LuSquareEqual, LuSquareSlash } from "react-icons/lu";
 
 const RoomPage = () => {
     const { roomID } = useParams();
@@ -34,7 +36,7 @@ const RoomPage = () => {
     const [newItemError, setNewItemError] = useState('');
 
     const [windowWidth, setWindowWidth] = useState(window.innerWidth);
-    const thresholdWidth = 650;
+    const thresholdWidth = 768;
     const minWidth = 400;
 
     const tabs = ['Expense', 'Income', 'Transfer'];
@@ -46,6 +48,7 @@ const RoomPage = () => {
 
     const INVALID_TOKEN = "INVALID_TOKEN";
     const HTTP_UNAUTHORIZED = 401;
+    const NAME_TRUNCATE_LENGTH = 18;
 
     const navigate = useNavigate();
 
@@ -110,7 +113,6 @@ const RoomPage = () => {
         };
     }, [roomID]);
 
-
     useEffect(() => {
         const newUserMap = new Map();
         users.forEach((user) => {
@@ -133,8 +135,9 @@ const RoomPage = () => {
 
         const hours = dateObj.getHours().toString().padStart(2, '0');
         const minutes = dateObj.getMinutes().toString().padStart(2, '0');
-
-        const datePart = dateObj.toISOString().split('T')[0]; // YYYY-MM-DD format
+        
+        const options = { day: '2-digit', month: 'short' };
+        const datePart = dateObj.toLocaleDateString('en-GB', options);
 
         return `${hours}:${minutes}, ${datePart}`;
     }
@@ -210,6 +213,25 @@ const RoomPage = () => {
 
         return Array.from(groupToItemsMap.values());
     };
+
+    const truncateLongNames = (s) => {
+        if (s.length > NAME_TRUNCATE_LENGTH) return s.substring(0, NAME_TRUNCATE_LENGTH) + "...";
+        else return s;
+    }
+
+    const splitAmountEvenly = () => {
+        const numUsers = users.length;
+        const amtToSplit = convertStrToInt(newAmount);
+        const evenlySplitNum = (amtToSplit / numUsers).toFixed(0);
+        console.log(evenlySplitNum);
+        const nextAmounts = users.map(_ => convertIntToStr(evenlySplitNum));
+        setNewAmounts(nextAmounts);
+        if (amtToSplit === getAmountsSum(nextAmounts)) {
+            setAmountsMatch(true);
+        } else {
+            setAmountsMatch(false);
+        }
+    }
 
     const handleNewTransfer = () => {
         if (newItemName === '') {
@@ -349,33 +371,471 @@ const RoomPage = () => {
             });
     }
 
+    function getExpenseForm() {
+        return <div className="flex flex-col space-y-4 items-start w-full">
+            <div className="flex w-full flex-row space-x-4 space-y-0 justify-center px-3 pt-2">
+                <input
+                    type="text"
+                    className="border rounded px-2 w-20 text-sm"
+                    id="amount"
+                    value={newAmount}
+                    onChange={(e) => {
+                        if (/^\d*\.?\d{0,2}$/.test(e.target.value)) {
+                            setNewAmount(e.target.value);
+                            if (e.target.value !== "" && getAmount(e.target.value) === getAmountsSum(newAmounts)) {
+                                setAmountsMatch(true);
+                            } else {
+                                setAmountsMatch(false);
+                            }
+                        }
+                    }}
+                    placeholder="0.00"
+                />
+                <span className="ml-2 py-1">by</span>
+                <select
+                    id="userDropdown"
+                    className="border rounded px-2 md:flex-none flex-grow text-sm"
+                    onChange={(e) => setNewToUserID(e.target.value)}
+                    value={newToUserID}
+                >
+                    <option value="" disabled>
+                        By...
+                    </option>
+                    {users.map((user) => (
+                        <option key={user.id} value={user.id}>
+                            {truncateLongNames(user.name)}
+                        </option>
+                    ))}
+                </select>
+            </div>
+            {"" !== newToUserID && <div className="w-full">
+                <div className="flex justify-center items-center w-full mb-2">
+                    <PiArrowsSplit className="text-2xl"/>
+                </div>
+
+                <div className="flex justify-center items-center w-full mb-2">
+                    <button className="underline text-sm text-blue-600" onClick={splitAmountEvenly}>
+                        Split evenly
+                    </button>
+                </div>
+
+                <div className="w-full flex justify-center">
+                    <ul className="space-y-1">
+                        {users.map((user, idx) => (
+                            <li key={user.id} className="flex w-full flex-row space-x-4 items-center">
+                                <input
+                                    type="text"
+                                    className="border rounded px-2 py-1 w-20 text-sm"
+                                    id="amount"
+                                    value={newAmounts[idx]}
+                                    onChange={(e) => {
+                                        if (/^\d*\.?\d{0,2}$/.test(e.target.value)) {
+                                            const nextAmounts = [...newAmounts];
+                                            nextAmounts[idx] = e.target.value;
+                                            setNewAmounts(nextAmounts);
+
+                                            if (getAmount(newAmount) === getAmountsSum(nextAmounts)) {
+                                                setAmountsMatch(true);
+                                            } else {
+                                                setAmountsMatch(false);
+                                            }
+                                        }
+                                    }}
+                                    placeholder="0.00"
+                                />
+                                <span>owed by</span>
+                                <span className="text-blue-500 md:flex-none flex-grow">
+                                    {truncateLongNames(user.name)}
+                                </span>
+                            </li>
+                        ))}
+                        {!amountsMatch && <li className="text-sm flex flex-row justify-center space-x-2 items-center w-full pt-4">
+                            <span>Residue:</span>
+                            <span className={"font-bold"}>{
+                                convertIntToStr(convertStrToInt(newAmount) - getAmountsSum(newAmounts))
+                            }</span>
+                        </li>}
+                    </ul>
+                </div>
+
+                <div className="mt-5 flex flex-col items-center w-full space-y-2 px-3">
+                    <input
+                        type="text"
+                        className="border rounded py-1 px-2 w-full md:w-3/4"
+                        value={newItemName}
+                        onChange={(e) => setNewItemName(e.target.value)}
+                        placeholder="Description"
+                    />
+                </div>
+            </div>}
+
+            {newItemError && <div className="w-full text-center text-red-500">{newItemError}</div>}
+
+            <button
+                className={`${
+                    amountsMatch && convertStrToInt(newAmount) !== 0
+                        ? "bg-green-500 hover:bg-green-700"
+                        : "bg-gray-300"
+                } text-white font-bold py-1 px-4 rounded w-full m-auto`}
+                onClick={handleNewGroupExpense}
+                disabled={!(amountsMatch && convertStrToInt(newAmount) !== 0)}
+            >
+                Post
+            </button>
+        </div>
+            ;
+    }
+
+    function getIncomeForm() {
+        return <div className="flex flex-col space-y-4 items-start w-full">
+            <div className="flex w-full flex-row space-x-4 space-y-0 justify-center px-3 pt-2">
+                <input
+                    type="text"
+                    className="border rounded px-2 w-20 text-sm"
+                    id="amount"
+                    value={newAmount}
+                    onChange={(e) => {
+                        if (/^\d*\.?\d{0,2}$/.test(e.target.value)) {
+                            setNewAmount(e.target.value);
+                            if (e.target.value !== "" && getAmount(e.target.value) === getAmountsSum(newAmounts)) {
+                                setAmountsMatch(true);
+                            } else {
+                                setAmountsMatch(false);
+                            }
+                        }
+                    }}
+                    placeholder="0.00"
+                />
+                <span className="ml-2 py-1">by</span>
+                <select
+                    id="userDropdown"
+                    className="border rounded px-2 md:flex-none flex-grow text-sm"
+                    onChange={(e) => setNewFromUserID(e.target.value)}
+                    value={newFromUserID}
+                >
+                    <option value="" disabled>
+                        To...
+                    </option>
+                    {users.map((user) => (
+                        <option key={user.id} value={user.id}>
+                            {truncateLongNames(user.name)}
+                        </option>
+                    ))}
+                </select>
+            </div>
+            {"" !== newFromUserID && <div className="w-full">
+                <div className="flex justify-center items-center w-full mb-2">
+                    <PiArrowsSplit className="text-2xl"/>
+                </div>
+
+                <div className="flex justify-center items-center w-full mb-2">
+                    <button className="underline text-sm text-blue-600" onClick={splitAmountEvenly}>
+                        Split evenly
+                    </button>
+                </div>
+
+                <div className="w-full flex justify-center">
+                    <ul className="space-y-1">
+                        {users.map((user, idx) => (
+                            <li key={user.id} className="flex w-full flex-row space-x-4 items-center">
+                                <input
+                                    type="text"
+                                    className="border rounded px-2 py-1 w-20 text-sm"
+                                    id="amount"
+                                    value={newAmounts[idx]}
+                                    onChange={(e) => {
+                                        if (/^\d*\.?\d{0,2}$/.test(e.target.value)) {
+                                            const nextAmounts = [...newAmounts];
+                                            nextAmounts[idx] = e.target.value;
+                                            setNewAmounts(nextAmounts);
+
+                                            if (getAmount(newAmount) === getAmountsSum(nextAmounts)) {
+                                                setAmountsMatch(true);
+                                            } else {
+                                                setAmountsMatch(false);
+                                            }
+                                        }
+                                    }}
+                                    placeholder="0.00"
+                                />
+                                <span>owed to</span>
+                                <span className="text-blue-500 md:flex-none flex-grow">
+                                    {truncateLongNames(user.name)}
+                                </span>
+                            </li>
+                        ))}
+                        {!amountsMatch && <li className="text-sm flex flex-row justify-center space-x-2 items-center w-full pt-4">
+                            <span>Residue:</span>
+                            <span className={"font-bold"}>{
+                                convertIntToStr(convertStrToInt(newAmount) - getAmountsSum(newAmounts))
+                            }</span>
+                        </li>}
+                    </ul>
+                </div>
+
+                <div className="mt-5 flex flex-col items-center w-full space-y-2 px-3">
+                    <input
+                        type="text"
+                        className="border rounded py-1 px-2 w-full md:w-3/4"
+                        value={newItemName}
+                        onChange={(e) => setNewItemName(e.target.value)}
+                        placeholder="Description"
+                    />
+                </div>
+            </div>}
+
+            {newItemError && <div className="w-full text-center text-red-500">{newItemError}</div>}
+
+            <button
+                className={`${
+                    amountsMatch && convertStrToInt(newAmount) !== 0
+                        ? "bg-green-500 hover:bg-green-700"
+                        : "bg-gray-300"
+                } text-white font-bold py-1 px-4 rounded w-full m-auto`}
+                onClick={handleNewGroupIncome}
+                disabled={!(amountsMatch && convertStrToInt(newAmount) !== 0)}
+            >
+                Post
+            </button>
+        </div>
+            ;
+    };
+
+    function getTransferForm() {
+        return <div className="flex flex-col items-center space-y-2 pt-2">
+            <div className="flex flex-col items-center space-y-3 w-full text-sm mb-2">
+                <select
+                    id="userDropdown"
+                    className="border rounded py-1 px-2"
+                    onChange={(e) => setNewFromUserID(e.target.value)}
+                    value={newFromUserID}
+                >
+                    <option value="" disabled>From...</option>
+                    {users.map((user) => (
+                        <option key={user.id} value={user.id}
+                                disabled={user.id === newToUserID}>
+                            {truncateLongNames(user.name)}
+                        </option>
+                    ))}
+                </select>
+
+                <div className="flex flex-row items-center space-x-2">
+                    <PiArrowDown className="text-xl"/>
+                    <input
+                        type="text"
+                        className="border rounded py-1 px-2 w-20"
+                        id="amount"
+                        value={newAmount}
+                        onChange={(e) => {
+                            if (/^\d*\.?\d{0,2}$/.test(e.target.value)) setNewAmount(e.target.value);
+                        }}
+                        placeholder="0.00"
+                    />
+                    <PiArrowDown className="text-white text-xl"/>
+                </div>
+
+                <select
+                    id="userDropdown"
+                    className="border rounded py-1 px-2"
+                    onChange={(e) => setNewToUserID(e.target.value)}
+                    value={newToUserID}
+                >
+                    <option value="" disabled>To...</option>
+                    {users.map((user) => (
+                        <option key={user.id} value={user.id}
+                                disabled={user.id === newFromUserID}>
+                            {truncateLongNames(user.name)}
+                        </option>
+                    ))}
+                </select>
+            </div>
+
+            {convertStrToInt(newAmount) !== 0 && newToUserID !== '' && newFromUserID !== '' &&
+                <div className="flex flex-col items-center w-full space-y-2">
+                    <input
+                        type="text"
+                        className="mt-3 mb-2 border rounded p-2 w-full md:w-3/4"
+                        value={newItemName}
+                        onChange={(e) => setNewItemName(e.target.value)}
+                        placeholder="Description"
+                    />
+                </div>
+            }
+
+            {newItemError && <div className="w-full text-center text-red-500">{newItemError}</div>}
+
+            <button
+                className={`${
+                    convertStrToInt(newAmount) !== 0 && newToUserID !== '' && newFromUserID !== ''
+                        ? "bg-green-500 hover:bg-green-700"
+                        : "bg-gray-300"
+                } text-white font-bold py-1 px-2 rounded w-full m-auto`}
+                onClick={handleNewTransfer}
+                disabled={!(convertStrToInt(newAmount) !== 0 && newToUserID !== '' && newFromUserID !== '')}
+            >
+                Post
+            </button>
+        </div>;
+    }
+
+    function getUserTile(user) {
+        return (
+            <li
+                key={user.id}
+                className="rounded border border-gray-300 flex items-center justify-between px-2 bg-white shadow-md hover:shadow-lg transition-shadow duration-300 space-x-4"
+            >
+                <div className="flex items-center space-x-2">
+                    <span className="text-sm font-medium text-blue-600">{user.name}</span>
+                    {user.id === loggedUserId && (
+                        <span className="text-sm text-blue-400">(me)</span>
+                    )}
+                </div>
+                <span className="text-gray-700">{getUserAmountComponent(user.id)}</span>
+            </li>
+        );
+    }
+
+
+    function getItemTile(item, gitem) {
+        return (
+            <li
+                key={item.id}
+                className="text-sm flex justify-between items-center px-2 py-1 border border-gray-300 rounded bg-white shadow-md hover:shadow-lg transition-shadow duration-300"
+            >
+                <div className={windowWidth > thresholdWidth ? "flex space-x-4 items-center" : "flex flex-col space-y-2"}>
+                    {gitem.type === "TRANSFER" ? (
+                        <div className="flex items-center space-x-2">
+                        <span className="text-blue-600 max-w-24 truncate">
+                            {userMap.get(item.to_user_id)}
+                        </span>
+                            <span className="text-gray-500">paid</span>
+                            <span className="font-bold">{convertIntToStr(item.amount)}</span>
+                            <span className="text-gray-500">to</span>
+                        <span className="text-blue-600 max-w-24 truncate">
+                            {userMap.get(item.from_user_id)}
+                        </span>
+                        </div>
+                    ) : (
+                        <div className="flex items-center space-x-2">
+                        <span className="text-blue-600 max-w-24 truncate">
+                            {userMap.get(item.from_user_id)}
+                        </span>
+                            <span className="text-gray-500">owes</span>
+                            <span className="font-bold">{convertIntToStr(item.amount)}</span>
+                            <span className="text-gray-500">to</span>
+                            <span className="text-blue-600 max-w-24 truncate">
+                            {userMap.get(item.to_user_id)}
+                        </span>
+                        </div>
+                    )}
+                </div>
+                <button
+                    className="hover:text-red-500 text-gray-400 font-bold rounded transition-colors duration-300"
+                    onClick={() => handleDeleteItem(item.id)}
+                >
+                    X
+                </button>
+            </li>
+        );
+    }
+
+
+    function getGroupTile(gitem) {
+        return (
+            <li
+                key={gitem.group_id}
+                className={`
+        ${gitem.type === "TRANSFER" && "bg-green-50"} 
+        ${gitem.type === "INCOME" && "bg-purple-50"} 
+        ${gitem.type === "EXPENSE" && "bg-orange-50"} 
+        flex justify-between items-center py-2 pb-2 px-2 border border-gray-300 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300
+    `}
+            >
+                <div className="space-y-2 w-full text-sm">
+                    <div className="flex items-center justify-between w-full">
+                        <div className="flex items-center space-x-2 flex-grow">
+                            <span className="font-bold max-w-40 truncate">{gitem.name}</span>
+                            <span className={`
+                                ${gitem.type === "TRANSFER" && "text-green-600"}
+                                ${gitem.type === "INCOME" && "text-purple-600"}
+                                ${gitem.type === "EXPENSE" && "text-orange-600"}
+                                font-bold
+                            `}>
+                                {convertIntToStr(gitem.amount)}
+                            </span>
+                        </div>
+                        <span className="text-gray-500 w-32 text-right">{formatDateTime(gitem.time)}</span>
+                        <button
+                            className="hover:text-red-500 text-gray-700 font-bold px-2 rounded transition-colors duration-300"
+                            onClick={() => handleDeleteGroup(gitem.group_id)}
+                        >
+                            X
+                        </button>
+                    </div>
+
+                    <ul className="w-full">
+                        {gitem.items.map((item) => getItemTile(item, gitem))}
+                    </ul>
+                </div>
+            </li>
+
+        );
+    }
+
+    function getSettlementTile(item) {
+        return (
+            <li
+                key={item.id}
+                className={`text-sm px-2 py-1 border border-gray-300 rounded shadow-md 
+                    hover:shadow-lg transition-shadow duration-300 flex
+                    md:space-x-2
+                    ${windowWidth < thresholdWidth ? "flex-col" : ""}`}
+            >
+                    <span className="text-orange-600 font-medium">{userMap.get(item.from_user_id)}</span>
+                    <span className="flex items-center">
+                        <span className="text-gray-500">pays</span>
+                        <span className="font-bold mx-1">{convertIntToStr(item.amount)}</span>
+                        <span className="text-gray-500">to</span>
+                    </span>
+                    <span className="text-purple-600 font-medium">{userMap.get(item.to_user_id)}</span>
+                    <span className="md:flex-grow"></span>
+                <button
+                    className="ml-auto text-sm underline text-green-600 hover:text-green-500 transition-colors duration-300"
+                    onClick={() => handleSettle(item)}
+                >
+                    Settle
+                </button>
+            </li>
+        );
+    }
+
+
     return (
         globalError !== '' ? NotFoundPage(globalError) :
-            // roomName === '' ? LoadingPage() :
-                <div className="min-h-screen bg-gray-100" style={{ minWidth: `${minWidth}px`}}>
-                    {/* Top Bar */}
-                    <div className="bg-blue-600 text-white flex justify-between items-center px-4 py-4">
-                        <div className="flex space-x-3 items-center">
-                            <button
-                                className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-                                onClick={handleBackToHome}>
-                                <BsCaretLeftFill/>
-                            </button>
-                            {/* Room Name */}
-                            <div className="pl-3 text-xl font-semibold">
-                                {roomName}
-                            </div>
-                            <button
-                                className="text-sm bg-blue-500 hover:bg-blue-700 text-white font-bold py-0 px-3 rounded"
-                                onClick={() => navigator.clipboard.writeText(roomID)}>
-                                Copy ID
-                            </button>
-                            <div className="flex items-center space-x-2">
-                                {/*{ windowWidth > thresholdWidth && <span className="text-gray-300">ID: {roomID}</span>}*/}
-                            </div>
+            <div className="min-h-screen bg-gray-100" style={{minWidth: `${minWidth}px`}}>
+                {/* Top Bar */}
+                <div className="bg-blue-600 text-white flex justify-between items-center px-4 py-3 h-12">
+                    <div className="flex space-x-3 items-center">
+                        <button
+                            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded"
+                            onClick={handleBackToHome}>
+                            <BsCaretLeftFill/>
+                        </button>
+                        {/* Room Name */}
+                        <div className="pl-0 text-lg font-semibold">
+                            {roomName}
                         </div>
-                        {/* Logged In User Info */}
-                        <div className="ml-auto flex items-center space-x-4">
+                        <button
+                            className="text-sm bg-blue-500 hover:bg-blue-700 text-white py-0 px-3 rounded"
+                            onClick={() => navigator.clipboard.writeText(roomID)}>
+                            Copy ID
+                        </button>
+                        <div className="flex items-center space-x-2">
+                            {/*{ windowWidth > thresholdWidth && <span className="text-gray-300">ID: {roomID}</span>}*/}
+                        </div>
+                    </div>
+                    {/* Logged In User Info */}
+                    <div className="ml-auto flex items-center space-x-4">
                             {windowWidth > thresholdWidth && <div className="ml-2 items-center">
                                 Logged in as: <span className="font-bold">{loggedUsername}</span>
                             </div>}
@@ -383,46 +843,39 @@ const RoomPage = () => {
                     </div>
 
                     {/* Main Content */}
-                    <div className="p-6">
+                    <div className="p-3">
                         {/* Users List */}
-                        <div className="bg-white shadow-md rounded p-6 mb-4">
+                        <div className="bg-white shadow-md rounded p-3 mb-4">
                             <button className="flex space-x-2" onClick={() => setShowUsers(!showUsers)}>
-                                <h3 className={`text-xl font-semibold ${showUsers && "mb-4"}`}>Users</h3>
+                                <h3 className={`text-lg font-semibold ${showUsers && "mb-1"}`}>
+                                    Users
+                                </h3>
                                 <h3 className="text-gray-400 mt-0.5 ml-3">{showUsers ? '▲' : '▼'}</h3>
                             </button>
-                            {showUsers && <ul className="list-disc list-inside space-y-2">
-                                {users.map((user) => (
-                                    <li key={user.id} className="rounded border flex p-2 space-x-2">
-                                        <span className={"text-blue-500"}>{user.name}</span>
-                                        {user.id === loggedUserId && <span className="text-blue-700">(me)</span>}
-                                        <span>
-                                            {getUserAmountComponent(user.id)}
-                                        </span>
-                                    </li>
-                                ))}
+                            {showUsers && <ul className="list-disc list-inside space-y-1">
+                                {users.map((user) => getUserTile(user))}
                             </ul>}
                         </div>
 
                         {/* Items List */}
-                        <div className="bg-white shadow-md rounded p-6 mb-4">
+                        <div className="bg-white shadow-md rounded p-3 mb-4">
                             <button className="flex space-x-2" onClick={() => setShowTransactions(!showTransactions)}>
-                                <h3 className={`text-xl font-semibold ${showTransactions && "mb-4"}`}>Transactions</h3>
+                                <h3 className={`text-lg font-semibold ${showTransactions && "mb-4"}`}>Transactions</h3>
                                 <h3 className="text-gray-400 mt-0.5 ml-3">{showTransactions ? '▲' : '▼'}</h3>
                             </button>
 
                             {showTransactions && <div>
                                 {/* New Item Menu */}
-                                <div className="mb-8 border-2 p-3 space-y-2 rounded">
-
+                                <div className="mb-8 border-2 p-0 space-y-2 rounded">
                                     {/* Tabs Header */}
                                     <div className="flex border-b border-gray-300">
                                         {tabs.map((tab, index) => (
                                             <button
                                                 key={index}
-                                                className={`flex-1 py-2 px-4 text-center focus:outline-none ${
+                                                className={`flex-1 py-1.5 px-4 text-center focus:outline-none ${
                                                     activeTab === tab
-                                                        ? 'border-b-4 border-blue-500 text-blue-600 font-semibold'
-                                                        : 'text-gray-600 hover:text-blue-500'
+                                                        ? 'border-b-4 border-blue-500 text-blue-600 font-semibold text-sm'
+                                                        : 'text-gray-600 hover:text-blue-500 text-sm'
                                                 }`}
                                                 onClick={() => setActiveTab(tab)}
                                             >
@@ -431,325 +884,28 @@ const RoomPage = () => {
                                         ))}
                                     </div>
 
+
                                     {activeTab === tabs[0] ?
                                         // Split expense
-                                        <div className="flex flex-col space-x-4 space-y-2 items-start">
-                                            <div className="flex flex-col items-center space-x-4 space-y-2 w-full">
-                                                <input
-                                                    type="text"
-                                                    className="border rounded p-2 flex-grow w-full"
-                                                    value={newItemName}
-                                                    onChange={(e) => setNewItemName(e.target.value)}
-                                                    placeholder="Add a new item"
-                                                />
-                                            </div>
-                                            <div className="flex space-x-4 items-center">
-                                                <input
-                                                    type="text"
-                                                    className="border rounded p-2 w-24"
-                                                    id="amount"
-                                                    value={newAmount}
-                                                    onChange={(e) => {
-                                                        if (/^\d*\.?\d{0,2}$/.test(e.target.value)) {
-                                                            setNewAmount(e.target.value)
-
-                                                            if (e.target.value !== "" && getAmount(e.target.value) === getAmountsSum(newAmounts)) {
-                                                                setAmountsMatch(true);
-                                                            } else {
-                                                                setAmountsMatch(false);
-                                                            }
-                                                        }
-                                                        ;
-                                                    }}
-                                                    placeholder="0.00"
-                                                />
-                                                <span>paid by</span>
-                                                <select
-                                                    id="userDropdown"
-                                                    className="border rounded p-2"
-                                                    onChange={(e) => setNewToUserID(e.target.value)}
-                                                    value={newToUserID}
-                                                >
-                                                    <option value="" disabled>By...</option>
-                                                    {users.map((user) => (
-                                                        <option key={user.id} value={user.id}>
-                                                            {user.name}
-                                                        </option>
-                                                    ))}
-                                                </select>
-                                            </div>
-                                            {"" !== newToUserID && users.map((user, idx) => (
-                                                <li key={user.id}
-                                                    className="flex space-x-2">
-                                                    <input
-                                                        type="text"
-                                                        className="border rounded p-2 w-24 text-sm"
-                                                        id="amount"
-                                                        value={newAmounts[idx]}
-                                                        onChange={(e) => {
-                                                            if (/^\d*\.?\d{0,2}$/.test(e.target.value)) {
-                                                                const nextAmounts = [...newAmounts];
-                                                                nextAmounts[idx] = e.target.value;
-                                                                setNewAmounts(nextAmounts);
-
-                                                                if (getAmount(newAmount) === getAmountsSum(nextAmounts)) {
-                                                                    setAmountsMatch(true);
-                                                                } else {
-                                                                    setAmountsMatch(false);
-                                                                }
-                                                            }
-                                                        }}
-                                                        placeholder="0.00"
-                                                    />
-                                                    <span>spent by</span>
-                                                    <span className="text-blue-500">{user.name}</span>
-                                                </li>
-                                            ))}
-                                            <button
-                                                className={`${amountsMatch && convertStrToInt(newAmount) !== 0 ? "bg-green-500 hover:bg-green-700" : "bg-gray-300"} text-white font-bold py-2 px-4 rounded m-auto`}
-                                                onClick={handleNewGroupExpense}
-                                                disabled={!(amountsMatch && convertStrToInt(newAmount) !== 0)}
-                                            >
-                                                Post
-                                            </button>
-                                            {newItemError && <div className="text-center text-red-500">{newItemError}</div>}
-                                        </div> :
+                                        getExpenseForm() :
                                         activeTab === tabs[1] ?
-
                                             // Split income
-                                            <div className="flex flex-col space-x-4 space-y-2 items-start">
-                                                <div className="flex flex-col items-center space-x-4 space-y-2 w-full">
-                                                    <input
-                                                        type="text"
-                                                        className="border rounded p-2 flex-grow w-full"
-                                                        value={newItemName}
-                                                        onChange={(e) => setNewItemName(e.target.value)}
-                                                        placeholder="Add a new item"
-                                                    />
-                                                </div>
-                                                <div className="flex space-x-4 items-center">
-                                                    <input
-                                                        type="text"
-                                                        className="border rounded p-2 w-24"
-                                                        id="amount"
-                                                        value={newAmount}
-                                                        onChange={(e) => {
-                                                            if (/^\d*\.?\d{0,2}$/.test(e.target.value)) {
-                                                                setNewAmount(e.target.value)
-
-                                                                if (e.target.value !== "" && getAmount(e.target.value) === getAmountsSum(newAmounts)) {
-                                                                    setAmountsMatch(true);
-                                                                } else {
-                                                                    setAmountsMatch(false);
-                                                                }
-                                                            }
-                                                        }}
-                                                        placeholder="0.00"
-                                                    />
-                                                    <span>paid to</span>
-                                                    <select
-                                                        id="userDropdown"
-                                                        className="border rounded p-2"
-                                                        onChange={(e) => setNewFromUserID(e.target.value)}
-                                                        value={newFromUserID}
-                                                    >
-                                                        <option value="" disabled>By...</option>
-                                                        {users.map((user) => (
-                                                            <option key={user.id} value={user.id}>
-                                                                {user.name}
-                                                            </option>
-                                                        ))}
-                                                    </select>
-                                                </div>
-                                                {"" !== newFromUserID && users.map((user, idx) => (
-                                                    <li key={user.id}
-                                                        className="flex space-x-2">
-                                                        <input
-                                                            type="text"
-                                                            className="border rounded p-2 w-24 text-sm"
-                                                            id="amount"
-                                                            value={newAmounts[idx]}
-                                                            onChange={(e) => {
-                                                                if (/^\d*\.?\d{0,2}$/.test(e.target.value)) {
-                                                                    const nextAmounts = [...newAmounts];
-                                                                    nextAmounts[idx] = e.target.value;
-                                                                    setNewAmounts(nextAmounts);
-
-                                                                    if (getAmount(newAmount) === getAmountsSum(nextAmounts)) {
-                                                                        setAmountsMatch(true);
-                                                                    } else {
-                                                                        setAmountsMatch(false);
-                                                                    }
-                                                                }
-                                                            }}
-                                                            placeholder="0.00"
-                                                        />
-                                                        <span>due to</span>
-                                                        <span className="text-blue-500">{user.name}</span>
-                                                    </li>
-                                                ))}
-                                                <button
-                                                    className={`${amountsMatch && convertStrToInt(newAmount) !== 0 ? "bg-green-500 hover:bg-green-700" : "bg-gray-300"} text-white font-bold py-2 px-4 rounded m-auto`}
-                                                    onClick={handleNewGroupIncome}
-                                                    disabled={!(amountsMatch && convertStrToInt(newAmount) !== 0)}
-                                                >
-                                                    Post
-                                                </button>
-                                                {newItemError &&
-                                                    <div className="text-center text-red-500">{newItemError}</div>}
-                                            </div> :
-
+                                            getIncomeForm() :
                                             // Transfer from one user to another
-                                            <div className="flex flex-col items-center space-x-4 space-y-2">
-                                                <input
-                                                    type="text"
-                                                    className="border rounded p-2 flex-grow w-full"
-                                                    value={newItemName}
-                                                    onChange={(e) => setNewItemName(e.target.value)}
-                                                    placeholder="Add a new item"
-                                                />
-                                                <div className="space-x-2">
-                                                    <select
-                                                        id="userDropdown"
-                                                        className="border rounded p-2"
-                                                        onChange={(e) => setNewFromUserID(e.target.value)}
-                                                        value={newFromUserID}
-                                                    >
-                                                        <option value="" disabled>From...</option>
-                                                        {users.map((user) => (
-                                                            <option key={user.id} value={user.id}
-                                                                    disabled={user.id === newToUserID}>
-                                                                {user.name}
-                                                            </option>
-                                                        ))}
-                                                    </select>
-                                                    <input
-                                                        type="text"
-                                                        className="border rounded p-2 w-24"
-                                                        id="amount"
-                                                        value={newAmount}
-                                                        onChange={(e) => {
-                                                            if (/^\d*\.?\d{0,2}$/.test(e.target.value)) setNewAmount(e.target.value);
-                                                        }}
-                                                        placeholder="0.00"
-                                                    />
-                                                    <select
-                                                        id="userDropdown"
-                                                        className="border rounded p-2"
-                                                        onChange={(e) => setNewToUserID(e.target.value)}
-                                                        value={newToUserID}
-                                                    >
-                                                        <option value="" disabled>To...</option>
-                                                        {users.map((user) => (
-                                                            <option key={user.id} value={user.id}
-                                                                    disabled={user.id === newFromUserID}>
-                                                                {user.name}
-                                                            </option>
-                                                        ))}
-                                                    </select>
-                                                </div>
-                                                <button
-                                                    className={`${(convertStrToInt(newAmount) !== 0 && newToUserID !== '' && newFromUserID !== '') ? "bg-green-500 hover:bg-green-700" : "bg-gray-300"} text-white font-bold py-2 px-4 rounded m-auto`}
-                                                    onClick={handleNewTransfer}
-                                                    disabled={!(convertStrToInt(newAmount) !== 0 && newToUserID !== '' && newFromUserID !== '')}
-                                                >
-                                                    Post
-                                                </button>
-                                                {newItemError &&
-                                                    <div className="text-center text-red-500">{newItemError}</div>}
-                                            </div>}
+                                            getTransferForm()}
                                 </div>
 
                                 {/* Item List */}
                                 <ul className="space-y-3">
-                                {groupedItems.map((gitem, _) => (
-                                    <li key={gitem.group_id} className={`
-                                        ${gitem.type === "TRANSFER" && "bg-green-50"} 
-                                        ${gitem.type === "INCOME" && "bg-purple-50"} 
-                                        ${gitem.type === "EXPENSE" && "bg-orange-50"} 
-                                        flex justify-between items-center p-4 border rounded
-                                    `}>
-                                        <div className={"space-y-2 w-full"}>
-                                            <div className="flex items-center justify-between w-full">
-                                                <div className="flex-grow space-x-2">
-                                                    <span className="font-bold">{gitem.name}</span>
-                                                    <span className={`
-                                                        ${gitem.type === "TRANSFER" && "text-green-600"}
-                                                        ${gitem.type === "INCOME" && "text-purple-600"}
-                                                        ${gitem.type === "EXPENSE" && "text-orange-600"}
-                                                        font-bold
-                                                    `}>{convertIntToStr(gitem.amount)}</span>
-                                                    <span className="text-gray-500">{formatDateTime(gitem.time)}</span>
-                                                </div>
-                                                <button
-                                                    className="hover:text-red-500 text-gray-700 font-bold py-0.5 px-2 rounded ml-auto mr-4"
-                                                    onClick={() => handleDeleteGroup(gitem.group_id)}
-                                                >
-                                                    X
-                                                </button>
-                                            </div>
-
-                                            <ul className="w-full">
-                                                {gitem.items.map((item) => (
-                                                    <li key={item.id}
-                                                        className="flex justify-between items-center p-4 border rounded">
-                                                        <div>{
-                                                            gitem.type === "TRANSFER" ?
-                                                                <div>
-                                                                    {" "}
-                                                                    <span
-                                                                        className="text-blue-500">({userMap.get(item.to_user_id)})</span>
-                                                                    {" "}
-                                                                    <span className="flex-grow">
-                                                                <span className="text-gray-500">paid</span>
-                                                                        {" "}
-                                                                        <span
-                                                                            className="font-bold">{convertIntToStr(item.amount)}</span>
-                                                                        {" "}
-                                                                        <span className="text-gray-500">to</span>
-                                                                </span>
-                                                                    {" "}
-                                                                    <span
-                                                                        className="text-blue-500">({userMap.get(item.from_user_id)})</span>
-                                                                </div> :
-                                                                <div
-                                                                    className={windowWidth > thresholdWidth ? "flex space-x-2" : "flex-col space-y-1"}>
-                                                                    {" "}
-                                                                    <span
-                                                                        className="text-blue-500">({userMap.get(item.from_user_id)})</span>
-                                                                    {" "}
-                                                                    <span className="flex-grow">
-                                                                <span className="text-gray-500">owes</span>
-                                                                        {" "}
-                                                                        <span
-                                                                            className="font-bold">{convertIntToStr(item.amount)}</span>
-                                                                        {" "}
-                                                                        <span className="text-gray-500">to</span>
-                                                                </span>
-                                                                    {" "}
-                                                                    <span
-                                                                        className="text-blue-500">({userMap.get(item.to_user_id)})</span>
-                                                                </div>
-                                                        }</div>
-                                                        <button
-                                                            className="hover:text-red-500 text-gray-400 font-bold py-0.5 px-2 rounded"
-                                                            onClick={() => handleDeleteItem(item.id)}>
-                                                            X
-                                                        </button>
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        </div>
-                                    </li>
-                                ))}
-                            </ul>
+                                    {groupedItems.map((gitem, _) => getGroupTile(gitem))}
+                                </ul>
                             </div>}
                         </div>
 
                         {/* Settlements Section */}
-                        <div className="bg-white shadow-md rounded p-6 mb-2">
+                        <div className="bg-white shadow-md rounded p-3 mb-2">
                             <button className="flex space-x-2" onClick={() => setShowSettlements(!showSettlements)}>
-                                <h3 className={`text-xl font-semibold ${showSettlements && "mb-4"}`}>Settlements</h3>
+                                <h3 className={`text-lg font-semibold ${showSettlements && "mb-4"}`}>Settlements</h3>
                                 <h3 className="text-gray-400 mt-0.5 ml-3">{showSettlements ? '▲' : '▼'}</h3>
                             </button>
                             {showSettlements && <div>
@@ -776,24 +932,7 @@ const RoomPage = () => {
                                 {/*</div>*/}
                                 <ul className="space-y-2">
                                     {simplifiedItems.length === 0 && <div className="text-green-600">All settled up!</div>}
-                                    {simplifiedItems.map((item) => (
-                                        <li key={item.id} className={ windowWidth < thresholdWidth ? "p-4 border rounded flex flex-col" : "p-4 border rounded flex" }>
-                                            {" "}
-                                            <span className="text-orange-600">{userMap.get(item.from_user_id)}</span>
-                                            {" "}
-                                            <span className="ml-2 mr-2">
-                                                <span className="text-gray-500">pays</span>
-                                                {" "}
-                                                <span className="font-bold">{convertIntToStr(item.amount)}</span>
-                                                {" "}
-                                                <span className="text-gray-500">to</span>
-                                            </span>
-                                            {" "}
-                                            <span className="text-purple-600">{userMap.get(item.to_user_id)}</span>
-                                            {" "}
-                                            <button className="ml-auto text-sm underline text-green-600" onClick={() => handleSettle(item)}>Settle</button>
-                                        </li>
-                                    ))}
+                                    {simplifiedItems.map((item) => getSettlementTile(item))}
                                 </ul>
                             </div>}
                         </div>
