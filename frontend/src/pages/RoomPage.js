@@ -473,12 +473,12 @@ const RoomPage = () => {
 
             <button
                 className={`${
-                    amountsMatch && convertStrToInt(newAmount) !== 0
+                    newToUserID !== "" && amountsMatch && convertStrToInt(newAmount) !== 0
                         ? "bg-green-500 hover:bg-green-700"
                         : "bg-gray-300"
                 } text-white font-bold py-1 px-4 rounded w-full m-auto`}
                 onClick={handleNewGroupExpense}
-                disabled={!(amountsMatch && convertStrToInt(newAmount) !== 0)}
+                disabled={!(newToUserID !== "" && amountsMatch && convertStrToInt(newAmount) !== 0)}
             >
                 Post
             </button>
@@ -588,12 +588,12 @@ const RoomPage = () => {
 
             <button
                 className={`${
-                    amountsMatch && convertStrToInt(newAmount) !== 0
+                    newFromUserID !== "" && amountsMatch && convertStrToInt(newAmount) !== 0
                         ? "bg-green-500 hover:bg-green-700"
                         : "bg-gray-300"
                 } text-white font-bold py-1 px-4 rounded w-full m-auto`}
                 onClick={handleNewGroupIncome}
-                disabled={!(amountsMatch && convertStrToInt(newAmount) !== 0)}
+                disabled={!(newFromUserID !== "" && amountsMatch && convertStrToInt(newAmount) !== 0)}
             >
                 Post
             </button>
@@ -651,10 +651,10 @@ const RoomPage = () => {
             </div>
 
             {convertStrToInt(newAmount) !== 0 && newToUserID !== '' && newFromUserID !== '' &&
-                <div className="flex flex-col items-center w-full space-y-2">
+                <div className="mt-5 flex flex-col items-center w-full space-y-2 px-3">
                     <input
                         type="text"
-                        className="mt-3 mb-2 border rounded p-2 w-full md:w-3/4"
+                        className="border rounded py-1 px-2 w-full md:w-3/4"
                         value={newItemName}
                         onChange={(e) => setNewItemName(e.target.value)}
                         placeholder="Description"
