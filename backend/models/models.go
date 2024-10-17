@@ -36,6 +36,7 @@ type User struct {
 type RoomUser struct {
 	RoomID uuid.UUID `gorm:"type:uuid;primary_key;" json:"room_id"`
 	UserID uuid.UUID `gorm:"type:uuid;index;" json:"user_id"`
+	Status string    `json:"status"`
 }
 
 type SimplifiedItem struct {

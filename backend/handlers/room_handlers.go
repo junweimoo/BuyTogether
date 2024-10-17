@@ -97,6 +97,7 @@ func (h *Handler) CreateRoom(w http.ResponseWriter, r *http.Request, _ httproute
 	var roomUser = models.RoomUser{
 		RoomID: room.ID,
 		UserID: user.ID,
+		Status: "IN",
 	}
 	if err := h.DB.Where("room_id = ? AND user_id = ?", roomUser.RoomID, roomUser.UserID).First(&roomUser).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -158,11 +159,13 @@ func (h *Handler) LeaveRoom(w http.ResponseWriter, r *http.Request, ps httproute
 		return
 	}
 
-	if err := h.DB.Where("room_id = ? AND user_id = ?", roomID, userID).Delete(&models.RoomUser{}).Error; err != nil {
+	if err := h.DB.Model(&models.RoomUser{}).
+		Where("room_id = ? AND user_id = ?", roomID, userID).
+		Update("status", "LEFT").Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			http.Error(w, "User does not belong to this room", http.StatusNotFound)
 		} else {
-			http.Error(w, "Database error", http.StatusInternalServerError)
+			http.Error(w, "DB_ERROR_ROOMUSERS", http.StatusInternalServerError)
 		}
 		return
 	}

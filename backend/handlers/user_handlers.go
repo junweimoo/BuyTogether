@@ -15,7 +15,7 @@ func (h *Handler) GetUsersInRoom(w http.ResponseWriter, r *http.Request, ps http
 	if err := h.DB.Table("room_users").
 		Select("users.id, users.name").
 		Joins("JOIN users ON users.id = room_users.user_id").
-		Where("room_users.room_id = ?", roomID).
+		Where("room_users.room_id = ? AND room_users.status != ?", roomID, "LEFT").
 		Find(&users).Error; err != nil {
 		http.Error(w, "Failed to retrieve users", http.StatusInternalServerError)
 		return
@@ -38,7 +38,7 @@ func (h *Handler) GetUserInfo(w http.ResponseWriter, r *http.Request, ps httprou
 	if err := h.DB.Table("room_users").
 		Select("rooms.id, rooms.name, rooms.created_at, rooms.updated_at").
 		Joins("JOIN rooms ON rooms.id = room_users.room_id").
-		Where("room_users.user_id = ?", userId).
+		Where("room_users.user_id = ? AND room_users.status != ?", userId, "LEFT").
 		Find(&rooms).Error; err != nil {
 		http.Error(w, "Failed to retrieve rooms belonging to user", http.StatusInternalServerError)
 		return

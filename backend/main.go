@@ -41,7 +41,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	db.AutoMigrate(&models.Room{}, &models.Item{}, &models.User{})
+	db.AutoMigrate(&models.Room{}, &models.Item{}, &models.User{}, &models.RoomUser{})
 
 	simplifier := algorithm.Simplifier{}
 	auth := middleware.Auth{JWTKey: []byte(jwtkey)}

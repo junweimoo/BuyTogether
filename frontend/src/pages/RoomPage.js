@@ -48,7 +48,7 @@ const RoomPage = () => {
 
     const INVALID_TOKEN = "INVALID_TOKEN";
     const HTTP_UNAUTHORIZED = 401;
-    const NAME_TRUNCATE_LENGTH = 18;
+    const NAME_TRUNCATE_LENGTH = 20;
 
     const navigate = useNavigate();
 
@@ -81,14 +81,21 @@ const RoomPage = () => {
             })
             .catch(error => {
                 console.error('Error retrieving room:', error);
-                if (error.response.status === HTTP_UNAUTHORIZED) {
+                if (!error.response) {
+                    setGlobalError("SERVER_ERROR");
+                } else if (error.response.status === HTTP_UNAUTHORIZED) {
                     navigate('/');
+                } else {
+                    setGlobalError(error.response.data);
                 }
-                setGlobalError(error.response.data);
             })
 
         const eventSource = new EventSource(`${api.defaults.baseURL}/rooms/${roomID}/sse?token=${encodeURIComponent(parsedUser.jwt)}`);
         eventSource.onmessage = (event) => {
+            if (!event.data) {
+                setGlobalError("SERVER_ERROR");
+                return;
+            }
             console.log(event.data)
             const parsedItems = JSON.parse(event.data);
             setItems((prevItems) => {
@@ -202,7 +209,8 @@ const RoomPage = () => {
                     time: item.created_at,
                     type: item.transaction_type,
                     items: [],
-                    amount: 0
+                    amount: 0,
+                    user_id: item.transaction_type === "EXPENSE" ? item.to_user_id : item.from_user_id,
                 });
             }
 
@@ -443,7 +451,7 @@ const RoomPage = () => {
                                     }}
                                     placeholder="0.00"
                                 />
-                                <span>owed by</span>
+                                <span>by</span>
                                 <span className="text-blue-500 md:flex-none flex-grow">
                                     {truncateLongNames(user.name)}
                                 </span>
@@ -558,7 +566,7 @@ const RoomPage = () => {
                                     }}
                                     placeholder="0.00"
                                 />
-                                <span>owed to</span>
+                                <span>to</span>
                                 <span className="text-blue-500 md:flex-none flex-grow">
                                     {truncateLongNames(user.name)}
                                 </span>
@@ -704,8 +712,8 @@ const RoomPage = () => {
             >
                 <div className={windowWidth > thresholdWidth ? "flex space-x-4 items-center" : "flex flex-col space-y-2"}>
                     {gitem.type === "TRANSFER" ? (
-                        <div className="flex items-center space-x-2">
-                        <span className="text-blue-600 max-w-24 truncate">
+                        <div className="flex items-center space-x-1">
+                        <span className="text-blue-600 max-w-28 truncate md:max-w-0">
                             {userMap.get(item.to_user_id)}
                         </span>
                             <span className="text-gray-500">paid</span>
@@ -716,8 +724,8 @@ const RoomPage = () => {
                         </span>
                         </div>
                     ) : (
-                        <div className="flex items-center space-x-2">
-                        <span className="text-blue-600 max-w-24 truncate">
+                        <div className="flex items-center space-x-1">
+                        <span className="text-blue-600 max-w-28 truncate">
                             {userMap.get(item.from_user_id)}
                         </span>
                             <span className="text-gray-500">owes</span>
@@ -751,11 +759,13 @@ const RoomPage = () => {
         flex justify-between items-center py-2 pb-2 px-2 border border-gray-300 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300
     `}
             >
-                <div className="space-y-2 w-full text-sm">
-                    <div className="flex items-center justify-between w-full">
-                        <div className="flex-col">
+                <div className="space-y-1 w-full text-sm">
+                    <div className="flex items-start justify-between w-full">
+                        <div className="flex-col ml-1">
                             <div className="flex items-center space-x-2 flex-grow">
                                 <span className="font-bold max-w-56 truncate">{gitem.name}</span>
+                            </div>
+                            <div className="space-x-2">
                                 <span className={`
                                     ${gitem.type === "TRANSFER" && "text-green-600"}
                                     ${gitem.type === "INCOME" && "text-purple-600"}
@@ -764,8 +774,16 @@ const RoomPage = () => {
                                 `}>
                                     {convertIntToStr(gitem.amount)}
                                 </span>
+                                <span className="text-gray-500 w-32 text-right">
+                                    {formatDateTime(gitem.time)}
+                                </span>
+                                {gitem.type === "EXPENSE" && <span className="text-purple-600">
+                                    {userMap.get(gitem.user_id)}
+                                </span>}
+                                {gitem.type === "INCOME" && <span className="text-orange-600">
+                                    {userMap.get(gitem.user_id)}
+                                </span>}
                             </div>
-                            <span className="text-gray-500 w-32 text-right">{formatDateTime(gitem.time)}</span>
                         </div>
                         <button
                             className="hover:text-red-500 text-gray-700 font-bold px-2 rounded transition-colors duration-300"
@@ -847,7 +865,7 @@ const RoomPage = () => {
                     {/* Main Content */}
                     <div className="p-3">
                         {/* Users List */}
-                        <div className="bg-white shadow-md rounded p-3 mb-4">
+                        <div className="bg-white shadow-md rounded p-3 mb-4 space-y-2">
                             <button className="flex space-x-2" onClick={() => setShowUsers(!showUsers)}>
                                 <h3 className={`text-lg font-semibold ${showUsers && "mb-1"}`}>
                                     Users
