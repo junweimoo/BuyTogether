@@ -119,7 +119,7 @@ func (h *Handler) JoinRoom(w http.ResponseWriter, r *http.Request, ps httprouter
 	roomID := ps.ByName("roomID")
 	var room models.Room
 	if err := h.DB.First(&room, "id = ?", roomID).Error; err != nil {
-		http.Error(w, "Room not found", http.StatusNotFound)
+		http.Error(w, "ROOM_NOT_FOUND", http.StatusNotFound)
 		return
 	}
 
@@ -127,17 +127,21 @@ func (h *Handler) JoinRoom(w http.ResponseWriter, r *http.Request, ps httprouter
 	var roomUser = models.RoomUser{
 		RoomID: room.ID,
 		UserID: userIDFromJWT,
+		Status: "IN",
 	}
-	if err := h.DB.Where("room_id = ? AND user_id = ?", roomUser.RoomID, roomUser.UserID).First(&roomUser).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			if err := h.DB.Create(&roomUser).Error; err != nil {
-				http.Error(w, "Failed to add user to room", http.StatusInternalServerError)
-				return
-			}
-		} else {
-			http.Error(w, "Database error", http.StatusInternalServerError)
+
+	result := h.DB.Model(&models.RoomUser{}).
+		Where("room_id = ? AND user_id = ?", roomUser.RoomID, roomUser.UserID).
+		Update("status", "IN")
+
+	if result.RowsAffected == 0 {
+		if err := h.DB.Create(&roomUser).Error; err != nil {
+			http.Error(w, "DB_ERROR_ROOMUSERS", http.StatusInternalServerError)
 			return
 		}
+	} else if result.Error != nil {
+		http.Error(w, "DB_ERROR_ROOMUSERS", http.StatusInternalServerError)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")

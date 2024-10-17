@@ -328,21 +328,39 @@ func (h *Handler) SimplifyItems(w http.ResponseWriter, r *http.Request, ps httpr
 
 func (h *Handler) simplifyAndStore(roomID uuid.UUID, algoType algorithm.AlgoType) ([]models.SimplifiedItem, error) {
 	var items []models.Item
-	if err := h.DB.Where("room_id = ?", roomID).Find(&items).Error; err != nil {
+
+	tx := h.DB.Begin()
+	if tx.Error != nil {
+		return nil, tx.Error
+	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	if err := tx.Raw("SELECT * FROM items WHERE room_id = ? FOR UPDATE", roomID).Scan(&items).Error; err != nil {
+		tx.Rollback()
 		return nil, err
 	}
 
 	simplifiedItems := h.Simplifier.SimplifyItems(items, algoType)
 
-	// TODO: lock DB row while processing
-	if err := h.DB.Where("room_id = ?", roomID).Delete(&models.SimplifiedItem{}).Error; err != nil {
+	if err := tx.Where("room_id = ?", roomID).Delete(&models.SimplifiedItem{}).Error; err != nil {
+		tx.Rollback()
 		return nil, err
 	}
 
 	if len(simplifiedItems) != 0 {
-		if err := h.DB.Create(&simplifiedItems).Error; err != nil {
+		if err := tx.Create(&simplifiedItems).Error; err != nil {
+			tx.Rollback()
 			return nil, err
 		}
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return nil, err
 	}
 
 	return simplifiedItems, nil
