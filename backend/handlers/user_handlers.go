@@ -88,34 +88,34 @@ func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request, ps httprout
 	var user models.User
 
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
-		http.Error(w, "Invalid input", http.StatusBadRequest)
+		http.Error(w, "INVALID_REQUEST", http.StatusBadRequest)
 		return
 	}
 
 	if len(user.PasswordHash) < 6 {
-		http.Error(w, "Password must be at least 6 characters", http.StatusBadRequest)
+		http.Error(w, "INVALID_PW_LENGTH", http.StatusBadRequest)
 		return
 	}
-	if len(user.Name) < 6 {
-		http.Error(w, "Name must be at least 6 characters", http.StatusBadRequest)
+	if len(user.Name) < 6 || len(user.Name) > 20 {
+		http.Error(w, "INVALID_USERNAME_LENGTH", http.StatusBadRequest)
 		return
 	}
 
 	var existingUser models.User
 	if err := h.DB.Where("name = ?", user.Name).First(&existingUser).Error; err == nil {
-		http.Error(w, "User already exists", http.StatusBadRequest)
+		http.Error(w, "USERNAME_ALREADY_EXIST", http.StatusBadRequest)
 		return
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.PasswordHash), bcrypt.DefaultCost)
 	if err != nil {
-		http.Error(w, "Failed to hash password", http.StatusInternalServerError)
+		http.Error(w, "PW_HASH_FAIL", http.StatusInternalServerError)
 		return
 	}
 	user.PasswordHash = string(hashedPassword)
 
 	if err := h.DB.Create(&user).Error; err != nil {
-		http.Error(w, "Failed to create user", http.StatusInternalServerError)
+		http.Error(w, "ERROR_DB_USERS", http.StatusInternalServerError)
 		return
 	}
 
@@ -130,29 +130,29 @@ func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request, ps httprout
 func (h *Handler) LoginUser(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var user models.User
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
-		http.Error(w, "Invalid input", http.StatusBadRequest)
+		http.Error(w, "INVALID_REQUEST", http.StatusBadRequest)
 		return
 	}
 
 	var foundUser models.User
 	if err := h.DB.First(&foundUser, "name = ?", user.Name).Error; err != nil {
-		http.Error(w, "User not found", http.StatusNotFound)
+		http.Error(w, "USERNAME_NOT_FOUND", http.StatusNotFound)
 		return
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(foundUser.PasswordHash), []byte(user.PasswordHash)); err != nil {
-		http.Error(w, "Incorrect password", http.StatusUnauthorized)
+		http.Error(w, "INCORRECT_PW", http.StatusUnauthorized)
 		return
 	}
 
 	tokenString, err := h.Auth.GenerateToken(&foundUser)
 	if err != nil {
-		http.Error(w, "Failed to generate token", http.StatusInternalServerError)
+		http.Error(w, "TOKEN_GEN_FAIL", http.StatusInternalServerError)
 		return
 	}
 
 	response := map[string]interface{}{
-		"message": "User logged in",
+		"message": "LOGIN_SUCCESS",
 		"user":    foundUser,
 		"token":   tokenString,
 	}

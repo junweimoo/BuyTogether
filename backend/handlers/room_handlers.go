@@ -71,12 +71,12 @@ func (h *Handler) GetRoomInfo(w http.ResponseWriter, r *http.Request, ps httprou
 func (h *Handler) CreateRoom(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	var createRoomRequest CreateRoomRequest
 	if err := json.NewDecoder(r.Body).Decode(&createRoomRequest); err != nil {
-		http.Error(w, "Invalid input", http.StatusBadRequest)
+		http.Error(w, "INVALID_REQUEST", http.StatusBadRequest)
 		return
 	}
 
-	if len(createRoomRequest.RoomName) < 5 {
-		http.Error(w, "Room name must be at least 5 characters", http.StatusBadRequest)
+	if len(createRoomRequest.RoomName) < 5 || len(createRoomRequest.RoomName) > 20 {
+		http.Error(w, "INVALID_NAME_LENGTH", http.StatusBadRequest)
 		return
 	}
 
@@ -84,13 +84,13 @@ func (h *Handler) CreateRoom(w http.ResponseWriter, r *http.Request, _ httproute
 	user := models.User{ID: userID}
 	room := models.Room{Name: createRoomRequest.RoomName}
 
-	if err := h.DB.Where("name = ?", createRoomRequest.RoomName).First(&room).Error; err == nil {
-		http.Error(w, "Room with the same name already exists", http.StatusInternalServerError)
-		return
-	}
+	//if err := h.DB.Where("name = ?", createRoomRequest.RoomName).First(&room).Error; err == nil {
+	//	http.Error(w, "Room with the same name already exists", http.StatusInternalServerError)
+	//	return
+	//}
 
 	if err := h.DB.Create(&room).Error; err != nil {
-		http.Error(w, "Error creating room", http.StatusInternalServerError)
+		http.Error(w, "ERROR_DB_ROOMS", http.StatusInternalServerError)
 		return
 	}
 
@@ -99,16 +99,9 @@ func (h *Handler) CreateRoom(w http.ResponseWriter, r *http.Request, _ httproute
 		UserID: user.ID,
 		Status: "IN",
 	}
-	if err := h.DB.Where("room_id = ? AND user_id = ?", roomUser.RoomID, roomUser.UserID).First(&roomUser).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			if err := h.DB.Create(&roomUser).Error; err != nil {
-				http.Error(w, "Failed to add user to room", http.StatusInternalServerError)
-				return
-			}
-		} else {
-			http.Error(w, "Database error", http.StatusInternalServerError)
-			return
-		}
+	if err := h.DB.Where("room_id = ? AND user_id = ?", roomUser.RoomID, roomUser.UserID).FirstOrCreate(&roomUser).Error; err != nil {
+		http.Error(w, "ERROR_DB_ROOMUSERS", http.StatusInternalServerError)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")

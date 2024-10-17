@@ -5,6 +5,14 @@ import { FaRegClipboard } from 'react-icons/fa';
 import api from '../Api';
 import * as PropTypes from "prop-types";
 
+const createRoomErrorMap = new Map([
+    ["INVALID_NAME_LENGTH", "Please use a name between 5 and 20 characters long."],
+]);
+const joinRoomErrorMap = new Map([
+    ["ROOM_NOT_FOUND", "A room with this ID does not exist."],
+]);
+const defaultErrMsg = "A system error has occurred. Please try again later.";
+
 function CenteredAlert(props) {
     if (!props.isOpen) return null;
 
@@ -67,7 +75,10 @@ const HomePage = () => {
         const handleResize = () => setWindowWidth(window.innerWidth);
         window.addEventListener('resize', handleResize);
         setWindowWidth(window.innerWidth);
+        return () => window.removeEventListener('resize', handleResize);
+    }, [])
 
+    useEffect(() => {
         const sessionUser = Cookies.get('session_user');
         if (sessionUser) {
             try {
@@ -85,9 +96,13 @@ const HomePage = () => {
                         const userRooms = response.data.rooms;
                         setRooms(userRooms);
                     }).catch(error => {
-                        setGlobalError(error.response.data);
-                        console.error('Error retrieving user info:', error);
-                        navigate("/login");
+                        if (!error.response || !error.response.data) {
+                            setGlobalError(defaultErrMsg);
+                        } else {
+                            setGlobalError(error.response.data);
+                            console.error('Error retrieving user info:', error);
+                            navigate("/login");
+                        }
                     }
                 );
             } catch (e) {
@@ -96,11 +111,21 @@ const HomePage = () => {
         } else {
             navigate("/login");
         }
-
-        return () => window.removeEventListener('resize', handleResize);
-    }, []);
+    }, [navigate]);
 
     const handleCreateRoom = () => {
+        // frontend validation
+        if (!newRoomName.trim()) {
+            return;
+        }
+
+        var hasError;
+        if (newRoomName.trim().length > 20 || newRoomName.trim().length < 5) {
+            setCreateRoomError("Please use a name between 5 and 20 characters long.");
+            hasError = true;
+        }
+        if (hasError) return;
+
         api.post('/rooms',
                 { roomName: newRoomName },
                 { headers: { Authorization: `Bearer ${loggedJWT}` } })
@@ -110,11 +135,20 @@ const HomePage = () => {
             })
             .catch(error => {
                 console.error('Error creating room:', error);
-                setCreateRoomError(error.response.data);
+                if (!error.response.data) {
+                    setCreateRoomError(defaultErrMsg);
+                } else {
+                    const errMsg = createRoomErrorMap.get(error.response.data.trim()) || defaultErrMsg;
+                    setCreateRoomError(errMsg);
+                }
             });
     };
 
     const handleJoinRoom = (id) => {
+        if (!newRoomID.trim()) {
+            return;
+        }
+
         api.post(`/rooms/${id.trim()}`,
                 undefined,
                 {headers: { Authorization: `Bearer ${loggedJWT}` }})
@@ -124,7 +158,12 @@ const HomePage = () => {
             })
             .catch(error => {
                 console.error('Error joining room:', error);
-                setJoinRoomError(error.response.data);
+                if (!error.response.data) {
+                    setJoinRoomError(defaultErrMsg);
+                } else {
+                    const errMsg = joinRoomErrorMap.get(error.response.data.trim()) || defaultErrMsg;
+                    setJoinRoomError(errMsg);
+                }
             });
     };
 
@@ -137,7 +176,11 @@ const HomePage = () => {
             })
             .catch(error => {
                 console.error('Error joining room:', error);
-                setLeaveRoomError(error.response.data);
+                if (!error.response.data) {
+                    setLeaveRoomError(defaultErrMsg);
+                } else {
+                    setLeaveRoomError(error.response.data);
+                }
             });
     }
 
@@ -151,6 +194,7 @@ const HomePage = () => {
 
     function getRoomTile(room) {
         return <li
+            key={room.id}
             className="border border-gray-300 rounded p-4 flex justify-between items-center shadow-md hover:shadow-lg transition-shadow duration-300">
             <div className="space-y-1 flex-col">
                 <div className="text-bold space-x-2">
@@ -195,14 +239,6 @@ const HomePage = () => {
                         {windowWidth > thresholdWidth && "Logged in as:"}
                         <span className="ml-1 font-bold">{loggedUsername}</span>
                     </div>
-                    {/*<div>*/}
-                    {/*    <button*/}
-                    {/*        className="bg-blue-500 hover:bg-blue-700 text-sm text-white items-center py-0 px-2 rounded"*/}
-                    {/*        onClick={() => navigator.clipboard.writeText(loggedUserId)}*/}
-                    {/*    >*/}
-                    {/*        Copy ID*/}
-                    {/*    </button>*/}
-                    {/*</div>*/}
                     <button
                         className="bg-red-500 hover:bg-red-700 text-sm text-white font-bold py-1 px-2 rounded"
                         onClick={handleLogout}
@@ -214,6 +250,12 @@ const HomePage = () => {
 
             {/* Main section */}
             <div className="p-3">
+                {(globalError !== "") && (
+                    <div className="text-center">
+                        {globalError}
+                    </div>
+                )}
+
                 {/* Create / Join Room Section */}
                 {(loggedJWT && globalError === "") &&(
                     <div className="p-6 bg-white shadow-md rounded w-full">
