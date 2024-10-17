@@ -19,4 +19,5 @@ type SSEUpdateInfo struct {
 	NewItems        []models.Item           `json:"new_items"`
 	DeletedItems    []models.Item           `json:"deleted_items"`
 	SimplifiedItems []models.SimplifiedItem `json:"simplified_items"`
+	NewUser         models.User             `json:"new_user"`
 }

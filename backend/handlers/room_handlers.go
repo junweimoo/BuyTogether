@@ -117,13 +117,20 @@ func (h *Handler) CreateRoom(w http.ResponseWriter, r *http.Request, _ httproute
 
 func (h *Handler) JoinRoom(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	roomID := ps.ByName("roomID")
+	userIDFromJWT := r.Context().Value("userID").(uuid.UUID)
+
 	var room models.Room
 	if err := h.DB.First(&room, "id = ?", roomID).Error; err != nil {
 		http.Error(w, "ROOM_NOT_FOUND", http.StatusNotFound)
 		return
 	}
 
-	userIDFromJWT := r.Context().Value("userID").(uuid.UUID)
+	var user models.User
+	if err := h.DB.Where("id = ?", userIDFromJWT).First(&user).Error; err != nil {
+		http.Error(w, "USER_NOT_FOUND", http.StatusNotFound)
+		return
+	}
+
 	var roomUser = models.RoomUser{
 		RoomID: room.ID,
 		UserID: userIDFromJWT,
@@ -143,6 +150,10 @@ func (h *Handler) JoinRoom(w http.ResponseWriter, r *http.Request, ps httprouter
 		http.Error(w, "DB_ERROR_ROOMUSERS", http.StatusInternalServerError)
 		return
 	}
+
+	h.pushUpdatesToOtherClients(roomID, userIDFromJWT.String(), &SSEUpdateInfo{
+		NewUser: user,
+	})
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(room)

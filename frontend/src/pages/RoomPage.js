@@ -96,7 +96,6 @@ const RoomPage = () => {
                 setGlobalError("SERVER_ERROR");
                 return;
             }
-            console.log(event.data)
             const parsedItems = JSON.parse(event.data);
             setItems((prevItems) => {
                 var deletedItems = parsedItems.deleted_items;
@@ -112,7 +111,19 @@ const RoomPage = () => {
 
                 return prevItems
             });
-            setSimplifiedItems(parsedItems.simplified_items);
+
+            if (parsedItems.simplified_item) {
+                setSimplifiedItems(parsedItems.simplified_items);
+            }
+
+            if (parsedItems.new_user) {
+                setUsers((prevUsers) => {
+                    if (prevUsers.findIndex((u) => u.id === parsedItems.new_user.id) === -1) {
+                        prevUsers = [...prevUsers, parsedItems.new_user];
+                    }
+                    return prevUsers;
+                });
+            }
         };
 
         return () => {

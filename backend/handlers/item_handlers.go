@@ -4,12 +4,10 @@ import (
 	"backend/algorithm"
 	"backend/models"
 	"encoding/json"
-	"fmt"
 	"github.com/google/uuid"
 	"github.com/julienschmidt/httprouter"
 	"gorm.io/gorm"
 	"net/http"
-	"sync"
 )
 
 const (
@@ -28,60 +26,6 @@ type CreateGroupExpenseRequest struct {
 
 type CreateGroupIncomeRequest struct {
 	Items []models.Item `json:"items"`
-}
-
-func (h *Handler) ItemSSEHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	roomID := ps.ByName("roomID")
-
-	if _, ok := h.RoomClients.Load(roomID); !ok {
-		var chanUserMap sync.Map
-		h.RoomClients.Store(roomID, &chanUserMap)
-	}
-	clients, _ := h.RoomClients.Load(roomID)
-	clientMap := clients.(*sync.Map)
-
-	messageChan := make(chan *SSEUpdateInfo)
-	clientMap.Store(messageChan, r.Context().Value("userID").(uuid.UUID).String())
-
-	defer func() {
-		clientMap.Delete(messageChan)
-		close(messageChan)
-	}()
-
-	w.Header().Set("Content-Type", "text/event-stream")
-	w.Header().Set("Cache-Control", "no-cache")
-	w.Header().Set("Connection", "keep-alive")
-
-	for {
-		select {
-		case info := <-messageChan:
-			serializedData, err := json.Marshal(info)
-			if err != nil {
-				http.Error(w, "ERR_JSON_SERIALIZE", http.StatusInternalServerError)
-				return
-			}
-			fmt.Fprintf(w, "data: %s\n\n", serializedData)
-			flusher, ok := w.(http.Flusher)
-			if ok {
-				flusher.Flush()
-			}
-		case <-r.Context().Done():
-			return
-		}
-	}
-}
-
-func (h *Handler) pushItemsToOtherClients(roomID string, userID string, info *SSEUpdateInfo) {
-	clients, _ := h.RoomClients.Load(roomID)
-	clientMap := clients.(*sync.Map)
-	clientMap.Range(func(ch, value interface{}) bool {
-		clientUID := value.(string)
-		if clientUID != userID {
-			updateChan := ch.(chan *SSEUpdateInfo)
-			updateChan <- info
-		}
-		return true
-	})
 }
 
 func (h *Handler) GetItems(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
@@ -122,7 +66,7 @@ func (h *Handler) DeleteItem(w http.ResponseWriter, r *http.Request, ps httprout
 		DeletedItems:    []models.Item{deletedItem},
 		SimplifiedItems: simplifiedItems,
 	}
-	h.pushItemsToOtherClients(ps.ByName("roomID"), userIDStr, info)
+	h.pushUpdatesToOtherClients(ps.ByName("roomID"), userIDStr, info)
 
 	response := map[string]interface{}{
 		"simplifiedItems": simplifiedItems,
@@ -158,7 +102,7 @@ func (h *Handler) DeleteGroupedItems(w http.ResponseWriter, r *http.Request, ps 
 		DeletedItems:    deletedItems,
 		SimplifiedItems: simplifiedItems,
 	}
-	h.pushItemsToOtherClients(ps.ByName("roomID"), userIDStr, info)
+	h.pushUpdatesToOtherClients(ps.ByName("roomID"), userIDStr, info)
 
 	response := map[string]interface{}{
 		"simplifiedItems": simplifiedItems,
@@ -196,7 +140,7 @@ func (h *Handler) CreateTransfer(w http.ResponseWriter, r *http.Request, ps http
 		NewItems:        []models.Item{item},
 		SimplifiedItems: simplifiedItems,
 	}
-	h.pushItemsToOtherClients(ps.ByName("roomID"), userIDStr, info)
+	h.pushUpdatesToOtherClients(ps.ByName("roomID"), userIDStr, info)
 
 	response := map[string]interface{}{
 		"newItem":         item,
@@ -239,7 +183,7 @@ func (h *Handler) CreateGroupExpense(w http.ResponseWriter, r *http.Request, ps 
 		NewItems:        req.Items,
 		SimplifiedItems: simplifiedItems,
 	}
-	h.pushItemsToOtherClients(ps.ByName("roomID"), userIDStr, info)
+	h.pushUpdatesToOtherClients(ps.ByName("roomID"), userIDStr, info)
 
 	response := map[string]interface{}{
 		"newItems":        req.Items,
@@ -282,7 +226,7 @@ func (h *Handler) CreateGroupIncome(w http.ResponseWriter, r *http.Request, ps h
 		NewItems:        req.Items,
 		SimplifiedItems: simplifiedItems,
 	}
-	h.pushItemsToOtherClients(ps.ByName("roomID"), userIDStr, info)
+	h.pushUpdatesToOtherClients(ps.ByName("roomID"), userIDStr, info)
 
 	response := map[string]interface{}{
 		"newItems":        req.Items,

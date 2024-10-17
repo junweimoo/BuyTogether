@@ -161,7 +161,7 @@ const HomePage = () => {
             <div className={windowWidth > thresholdWidth ? "ml-auto space-x-3" : "space-y-3 ml-auto flex flex-col"}>
                 <button
                     className="text-sm bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded transition-colors duration-300"
-                    onClick={() => handleJoinRoom(room.id)}
+                    onClick={() => navigate(`/room/${room.id}`)}
                 >
                     Enter
                 </button>
