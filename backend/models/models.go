@@ -8,10 +8,11 @@ import (
 )
 
 type Room struct {
-	ID        uuid.UUID `gorm:"type:uuid;primary_key;" json:"id"`
-	Name      string    `gorm:"type:text" json:"name"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID           uuid.UUID `gorm:"type:uuid;primary_key;" json:"id"`
+	Name         string    `gorm:"type:text" json:"name"`
+	BaseCurrency string    `gorm:"type:text" json:"base_currency"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
 }
 
 type Item struct {
@@ -21,6 +22,8 @@ type Item struct {
 	FromUserID      uuid.UUID `gorm:"type:uuid;index;" json:"from_user_id"`
 	ToUserID        uuid.UUID `gorm:"type:uuid;index;" json:"to_user_id"`
 	Amount          int       `gorm:"type:int;" json:"amount"`
+	ForeignAmount   int       `gorm:"type:int;" json:"foreign_amount"`
+	ForeignCurrency string    `json:"foreign_currency"`
 	Content         string    `json:"content"`
 	TransactionType string    `json:"transaction_type"`
 	CreatedAt       time.Time `json:"created_at"`

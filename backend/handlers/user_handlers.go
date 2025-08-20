@@ -9,6 +9,14 @@ import (
 	"net/http"
 )
 
+func (h *Handler) HealthCheck(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	w.Header().Set("Content-Type", "application/json")
+	response := map[string]interface{}{
+		"status":  "OK",
+	}
+	json.NewEncoder(w).Encode(response)
+}
+
 func (h *Handler) GetUsersInRoom(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	roomID := ps.ByName("roomID")
 	var users []models.User

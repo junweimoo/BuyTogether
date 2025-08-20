@@ -19,7 +19,7 @@ function CenteredAlert(props) {
     return (
         <div className="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white p-6 rounded-lg shadow-lg w-2/3 max-w-md text-center">
-                <h2 className="text-xl font-semibold mb-4">Alert</h2>
+                <h2 className="text-xl font-semib`old mb-4">Alert</h2>
                 <p className="mb-6">{props.message}</p>
                 <div className="items-center space-x-4">
                     <button

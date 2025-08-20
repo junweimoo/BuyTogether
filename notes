@@ -1,0 +1,45 @@
+-- Invites --
+
+Scenario 1:
+0. Admin generate invite link
+1. Open invite link
+2. User not logged in -> show login/register page
+3. Register
+4. Show invite page
+5. Accept
+6. Show room
+
+Scenario 2:
+0. Admin generate invite link
+1. Open invite link
+2. User logged in -> show invite page 
+3. Accept
+4. Show room
+
+
+-- FX --
+
+Scenario 1:
+0. User selects base currency when creating room
+
+Scenario 2:
+0. User adds a new currency to room with FX rate against base currency
+1. User creates a new transaction with new currency
+2. New and base currency, along with corresponding amounts, are displayed in the transaction list
+   Note: converted base currency amount is stored and based on FX rate at time of creation
+3. User views simplified debts
+4. Converted base currency amounts are used for simplification
+
+
+-- Roles --
+
+Scenario 1:
+0. Non-admin user tries to modify / delete a transaction created by someone else 
+1. Not allowed
+
+Scenario 2:
+0. Admin user grants admin role to another non-admin user
+1. User can now modify / delete all transactions in the room 
+
+
+-- UIUX Enhancement --

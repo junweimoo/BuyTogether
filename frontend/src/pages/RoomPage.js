@@ -46,6 +46,8 @@ const RoomPage = () => {
     const [showTransactions, setShowTransactions] = useState(true);
     const [showSettlements, setShowSettlements] = useState(true);
 
+    const [isCopied, setIsCopied] = useState(false);
+
     const INVALID_TOKEN = "INVALID_TOKEN";
     const HTTP_UNAUTHORIZED = 401;
     const NAME_TRUNCATE_LENGTH = 20;
@@ -112,7 +114,7 @@ const RoomPage = () => {
                 return prevItems
             });
 
-            if (parsedItems.simplified_item) {
+            if (parsedItems.simplified_items) {
                 setSimplifiedItems(parsedItems.simplified_items);
             }
 
@@ -242,7 +244,6 @@ const RoomPage = () => {
         const numUsers = users.length;
         const amtToSplit = convertStrToInt(newAmount);
         const evenlySplitNum = (amtToSplit / numUsers).toFixed(0);
-        console.log(evenlySplitNum);
         const nextAmounts = users.map(_ => convertIntToStr(evenlySplitNum));
         setNewAmounts(nextAmounts);
         if (amtToSplit === getAmountsSum(nextAmounts)) {
@@ -840,6 +841,33 @@ const RoomPage = () => {
         );
     }
 
+    const copyToClipboard = async (text) => {
+        if (navigator?.clipboard?.writeText) {
+            try {
+                await navigator.clipboard.writeText(text);
+                setIsCopied(true);
+                setTimeout(() => setIsCopied(false), 2000);
+            } catch (err) {
+                console.error("Failed to copy: ", err);
+            }
+        } else {
+            // Fallback (deprecated but works widely)
+            const textarea = document.createElement("textarea");
+            textarea.value = text;
+            textarea.style.position = "fixed"; // prevent scrolling
+            document.body.appendChild(textarea);
+            textarea.focus();
+            textarea.select();
+            try {
+                document.execCommand("copy");
+                setIsCopied(true);
+                setTimeout(() => setIsCopied(false), 3000);
+            } catch (err) {
+                console.error("Fallback copy failed", err);
+            }
+            document.body.removeChild(textarea);
+        }
+    };
 
     return (
         globalError !== '' ? NotFoundPage(globalError) :
@@ -856,10 +884,9 @@ const RoomPage = () => {
                         <div className="pl-0 text-lg font-semibold">
                             {roomName}
                         </div>
-                        <button
-                            className="text-sm bg-blue-500 hover:bg-blue-700 text-white py-0 px-3 rounded"
-                            onClick={() => navigator.clipboard.writeText(roomID)}>
-                            Copy ID
+                        <button onClick={() => copyToClipboard(roomID)}
+                            className="text-sm bg-blue-500 hover:bg-blue-700 text-white py-0 px-3 rounded">
+                            {isCopied ? "Copied" : "Copy ID"}
                         </button>
                         <div className="flex items-center space-x-2">
                             {/*{ windowWidth > thresholdWidth && <span className="text-gray-300">ID: {roomID}</span>}*/}

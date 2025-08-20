@@ -4,12 +4,13 @@ import (
 	"backend/algorithm"
 	"backend/middleware"
 	"fmt"
-	"github.com/joho/godotenv"
-	"github.com/rs/cors"
 	"log"
 	"net/http"
 	"os"
 	"sync"
+
+	"github.com/joho/godotenv"
+	"github.com/rs/cors"
 
 	"github.com/julienschmidt/httprouter"
 	"gorm.io/driver/postgres"
@@ -46,11 +47,24 @@ func main() {
 	simplifier := algorithm.Simplifier{}
 	auth := middleware.Auth{JWTKey: []byte(jwtkey)}
 
+	// roomID -> clientUID -> chan *SSEUpdateInfo
 	var roomClients sync.Map
 
-	h := handlers.Handler{DB: db, Simplifier: &simplifier, Auth: &auth, RoomClients: &roomClients}
+	// roomID -> []models.SimplifiedItem
+	var roomToSimplifiedItems sync.Map
+
+	h := handlers.Handler{
+		DB:                    db,
+		Simplifier:            &simplifier,
+		Auth:                  &auth,
+		RoomClients:           &roomClients,
+		RoomToSimplifiedItems: &roomToSimplifiedItems,
+	}
 
 	router := httprouter.New()
+
+	// Health check
+	router.GET("/healthcheck", h.HealthCheck)
 
 	// Rooms
 	router.POST("/rooms", auth.JWTAuth(h.CreateRoom))
@@ -58,12 +72,14 @@ func main() {
 	router.POST("/rooms/:roomID", auth.JWTAuth(h.JoinRoom))
 	router.POST("/rooms/:roomID/leave", auth.JWTAuth(h.LeaveRoom))
 	router.GET("/rooms/:roomID/users", h.GetUsersInRoom)
+	// TODO: Roles (Admin, User, ...), InviteUser, ApproveUser
 
 	// Items
 	router.GET("/rooms/:roomID/items", auth.JWTAuth(h.GetItems))
 	router.DELETE("/rooms/:roomID/items/:itemID", auth.JWTAuth(h.DeleteItem))
 	router.GET("/rooms/:roomID/simplified_items", auth.JWTAuth(h.GetSimplifiedItems))
 	router.POST("/rooms/:roomID/simplify", auth.JWTAuth(h.SimplifyItems))
+	// TODO: support FX
 	router.POST("/rooms/:roomID/items", auth.JWTAuth(h.CreateTransfer))
 	router.POST("/rooms/:roomID/items/groupExpense", auth.JWTAuth(h.CreateGroupExpense))
 	router.POST("/rooms/:roomID/items/groupIncome", auth.JWTAuth(h.CreateGroupIncome))
@@ -76,13 +92,13 @@ func main() {
 	router.GET("/users/:userID", auth.JWTAuth(h.GetUserInfo))
 
 	c := cors.New(cors.Options{
-		AllowedOrigins: []string{"*"},
+		AllowedOrigins: []string{"http://158.69.215.13:3000", "http://localhost:3000"},
 		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders: []string{"Content-Type", "Authorization"},
 	})
 
 	corsHandler := c.Handler(router)
 
-	log.Println("Server running on port 8080")
-	log.Fatal(http.ListenAndServe(":8080", corsHandler))
+	log.Println("Server running on port 5001")
+	log.Fatal(http.ListenAndServe(":5001", corsHandler))
 }

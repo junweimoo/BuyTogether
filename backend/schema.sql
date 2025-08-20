@@ -1,6 +1,8 @@
 CREATE TABLE rooms (
                        id UUID PRIMARY KEY,
                        name TEXT NOT NULL,
+                       base_currency TEXT,
+                       foreign_currencies TEXT,
                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -26,6 +28,8 @@ CREATE TABLE items (
                        from_user_id UUID NOT NULL REFERENCES users(id),
                        to_user_id UUID NOT NULL REFERENCES users(id),
                        amount INTEGER NOT NULL,
+                       foreign_amount INTEGER,
+                       foreign_currency TEXT,
                        content TEXT NOT NULL,
                        transaction_type TEXT NOT NULL,
                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,

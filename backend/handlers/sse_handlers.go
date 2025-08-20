@@ -3,10 +3,11 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/google/uuid"
-	"github.com/julienschmidt/httprouter"
 	"net/http"
 	"sync"
+
+	"github.com/google/uuid"
+	"github.com/julienschmidt/httprouter"
 )
 
 func (h *Handler) ItemSSEHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
@@ -30,6 +31,11 @@ func (h *Handler) ItemSSEHandler(w http.ResponseWriter, r *http.Request, ps http
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
+
+	flusher, ok := w.(http.Flusher)
+	if ok {
+		flusher.Flush()
+	}
 
 	for {
 		select {
