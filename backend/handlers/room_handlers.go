@@ -3,10 +3,11 @@ package handlers
 import (
 	"backend/models"
 	"encoding/json"
+	"net/http"
+
 	"github.com/google/uuid"
 	"github.com/julienschmidt/httprouter"
 	"gorm.io/gorm"
-	"net/http"
 )
 
 type CreateRoomRequest struct {
@@ -145,7 +146,7 @@ func (h *Handler) JoinRoom(w http.ResponseWriter, r *http.Request, ps httprouter
 	}
 
 	h.pushUpdatesToOtherClients(roomID, userIDFromJWT.String(), &SSEUpdateInfo{
-		NewUser: user,
+		NewUser: &user,
 	})
 
 	w.Header().Set("Content-Type", "application/json")
