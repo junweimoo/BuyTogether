@@ -1,3 +1,8 @@
+-- Cache simplified items -- DONE
+Current: simplified items are deleted and stored to DB each time items are updatec
+Change: cache simplified items in memory instead of storing to DB each time
+
+
 -- Invites --
 
 Scenario 1:
@@ -43,3 +48,7 @@ Scenario 2:
 
 
 -- UIUX Enhancement --
+
+Scenario 1:
+0. User clicks on delete button for a transaction
+1. Spinner shows until the items are updated

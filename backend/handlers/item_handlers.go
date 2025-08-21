@@ -239,12 +239,19 @@ func (h *Handler) CreateGroupIncome(w http.ResponseWriter, r *http.Request, ps h
 }
 
 func (h *Handler) GetSimplifiedItems(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	roomID := ps.ByName("roomID")
+	roomID, err := uuid.Parse(ps.ByName("roomID"))
+	if err != nil {
+		http.Error(w, "Invalid Room ID", http.StatusBadRequest)
+		return
+	}
 
 	var simplifiedItems []models.SimplifiedItem
-	if err := h.DB.Where("room_id = ?", roomID).Find(&simplifiedItems).Error; err != nil {
-		http.Error(w, "DB_ERROR_SIMPLIFIED_ITEMS", http.StatusInternalServerError)
-		return
+
+	if cachedSimplifiedItems, cacheFound := h.RoomToSimplifiedItems.Load(roomID); cacheFound {
+		simplifiedItems = cachedSimplifiedItems.([]models.SimplifiedItem)
+	} else {
+		computedSimplifiedItems, _ := h.simplifyAndStore(roomID, DefaultAlgo)
+		simplifiedItems = computedSimplifiedItems
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -273,40 +280,13 @@ func (h *Handler) SimplifyItems(w http.ResponseWriter, r *http.Request, ps httpr
 
 func (h *Handler) simplifyAndStore(roomID uuid.UUID, algoType algorithm.AlgoType) ([]models.SimplifiedItem, error) {
 	var items []models.Item
-
-	tx := h.DB.Begin()
-	if tx.Error != nil {
-		return nil, tx.Error
-	}
-
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-		}
-	}()
-
-	if err := tx.Raw("SELECT * FROM items WHERE room_id = ? FOR UPDATE", roomID).Scan(&items).Error; err != nil {
-		tx.Rollback()
+	if err := h.DB.Where("room_id = ?", roomID).Order("created_at ASC").Find(&items).Error; err != nil {
 		return nil, err
 	}
 
 	simplifiedItems := h.Simplifier.SimplifyItems(items, algoType)
 
-	if err := tx.Where("room_id = ?", roomID).Delete(&models.SimplifiedItem{}).Error; err != nil {
-		tx.Rollback()
-		return nil, err
-	}
-
-	if len(simplifiedItems) != 0 {
-		if err := tx.Create(&simplifiedItems).Error; err != nil {
-			tx.Rollback()
-			return nil, err
-		}
-	}
-
-	if err := tx.Commit().Error; err != nil {
-		return nil, err
-	}
+	h.RoomToSimplifiedItems.Store(roomID, simplifiedItems)
 
 	return simplifiedItems, nil
 }

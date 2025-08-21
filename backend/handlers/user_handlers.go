@@ -3,16 +3,17 @@ package handlers
 import (
 	"backend/models"
 	"encoding/json"
+	"net/http"
+
 	"github.com/google/uuid"
 	"github.com/julienschmidt/httprouter"
 	"golang.org/x/crypto/bcrypt"
-	"net/http"
 )
 
 func (h *Handler) HealthCheck(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	w.Header().Set("Content-Type", "application/json")
 	response := map[string]interface{}{
-		"status":  "OK",
+		"status": "OK",
 	}
 	json.NewEncoder(w).Encode(response)
 }

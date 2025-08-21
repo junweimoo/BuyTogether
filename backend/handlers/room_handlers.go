@@ -54,9 +54,12 @@ func (h *Handler) GetRoomInfo(w http.ResponseWriter, r *http.Request, ps httprou
 	}
 
 	var simplifiedItems []models.SimplifiedItem
-	if err := h.DB.Where("room_id = ?", roomID).Find(&simplifiedItems).Error; err != nil {
-		http.Error(w, "Failed to retrieve simplified items", http.StatusInternalServerError)
-		return
+
+	if cachedSimplifiedItems, cacheFound := h.RoomToSimplifiedItems.Load(roomID); cacheFound {
+		simplifiedItems = cachedSimplifiedItems.([]models.SimplifiedItem)
+	} else {
+		computedSimplifiedItems, _ := h.simplifyAndStore(roomID, DefaultAlgo)
+		simplifiedItems = computedSimplifiedItems
 	}
 
 	response := map[string]interface{}{
@@ -84,11 +87,6 @@ func (h *Handler) CreateRoom(w http.ResponseWriter, r *http.Request, _ httproute
 	userID := r.Context().Value("userID").(uuid.UUID)
 	user := models.User{ID: userID}
 	room := models.Room{Name: createRoomRequest.RoomName}
-
-	//if err := h.DB.Where("name = ?", createRoomRequest.RoomName).First(&room).Error; err == nil {
-	//	http.Error(w, "Room with the same name already exists", http.StatusInternalServerError)
-	//	return
-	//}
 
 	if err := h.DB.Create(&room).Error; err != nil {
 		http.Error(w, "ERROR_DB_ROOMS", http.StatusInternalServerError)
