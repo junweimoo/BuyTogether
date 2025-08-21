@@ -3,23 +3,35 @@ Current: simplified items are deleted and stored to DB each time items are updat
 Change: cache simplified items in memory instead of storing to DB each time
 
 
--- Invites --
+-- Invites -- 
 
 Scenario 1:
-0. Admin generate invite link
+0. Admin generate invite link + code
 1. Open invite link
-2. User not logged in -> show login/register page
+2. User not logged in -> show login/register page with invite info
 3. Register
 4. Show invite page
 5. Accept
 6. Show room
 
 Scenario 2:
-0. Admin generate invite link
+0. Admin generate invite link + code
 1. Open invite link
-2. User logged in -> show invite page 
+2. User logged in -> show invite page
 3. Accept
 4. Show room
+
+Scenario 3:
+0. Admin generate invite link + code
+1. User enters code into join by code field and clicks join
+2. Show room
+
+Design: 
+API 1: joinByInviteCode 
+API 2: createInviteCode
+API 3: queryInviteCode
+InviteCode{roomID: uuid, code: uuid, expiry: date, usesRemaining: int}
+
 
 
 -- FX --

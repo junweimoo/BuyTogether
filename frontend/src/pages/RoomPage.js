@@ -814,10 +814,10 @@ const RoomPage = () => {
         );
     }
 
-    function getSettlementTile(item) {
+    function getSettlementTile(item, idx) {
         return (
             <li
-                key={item.id}
+                key={idx}
                 className={`text-sm px-2 py-1 border border-gray-300 rounded shadow-md 
                     hover:shadow-lg transition-shadow duration-300 flex
                     md:space-x-2
@@ -835,7 +835,7 @@ const RoomPage = () => {
                     className="ml-auto text-sm underline text-green-600 hover:text-green-500 transition-colors duration-300"
                     onClick={() => handleSettle(item)}
                 >
-                    Settle
+                    Settled
                 </button>
             </li>
         );
@@ -990,7 +990,7 @@ const RoomPage = () => {
                                 {/*</div>*/}
                                 <ul className="space-y-2">
                                     {simplifiedItems.length === 0 && <div className="text-green-600">All settled up!</div>}
-                                    {simplifiedItems.map((item) => getSettlementTile(item))}
+                                    {simplifiedItems.map((item, index) => getSettlementTile(item, index))}
                                 </ul>
                             </div>}
                         </div>

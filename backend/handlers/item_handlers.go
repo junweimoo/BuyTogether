@@ -284,6 +284,7 @@ func (h *Handler) simplifyAndStore(roomID uuid.UUID, algoType algorithm.AlgoType
 		return nil, err
 	}
 
+	// TODO: SimplifiedItems have id of 0
 	simplifiedItems := h.Simplifier.SimplifyItems(items, algoType)
 
 	h.RoomToSimplifiedItems.Store(roomID, simplifiedItems)
